@@ -150,6 +150,10 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
             Senior Onboarding
           </div>
           <h3 className="text-lg font-bold">Register as a Mentor</h3>
+          <div className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
+            <span className="text-sm">💰</span>
+            <span className="text-xs font-bold text-white">Earn ₹{CONFIG.MENTOR_PAYOUT} for each session</span>
+          </div>
         </div>
 
         {/* Body - Scrollable */}
@@ -247,11 +251,10 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
                   key={exam}
                   type="button"
                   onClick={() => toggleExam(exam)}
-                  className={`ob-exam-chip px-3 py-2 rounded-full border text-xs font-semibold transition ${
-                    selectedExams.has(exam)
-                      ? 'border-indigo-200 bg-indigo-50 text-indigo-600'
-                      : 'border-gray-200 bg-white text-gray-600'
-                  }`}
+                  className={`ob-exam-chip px-3 py-2 rounded-full border text-xs font-semibold transition ${selectedExams.has(exam)
+                    ? 'border-indigo-200 bg-indigo-50 text-indigo-600'
+                    : 'border-gray-200 bg-white text-gray-600'
+                    }`}
                 >
                   {exam}
                 </button>
@@ -422,7 +425,7 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
           {/* Info Box */}
           <div className="ob-info blue flex gap-2 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 mb-3 text-xs leading-relaxed">
             <span>🌐</span>
-            <div>Sessions are 30-min 1:1 Google Meet calls. You'll earn ₹{CONFIG.MENTOR_PAYOUT} per session.</div>
+            <div>Sessions are 20 to 25-min 1:1 Google Meet calls. You'll earn ₹{CONFIG.MENTOR_PAYOUT} per session.</div>
           </div>
 
           {/* Upload College ID */}
@@ -432,11 +435,10 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
             </label>
             <label
               htmlFor="ob_idcard"
-              className={`ob-id-upload-btn w-full px-3 py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer transition ${
-                idFileName
-                  ? 'border-green-300 bg-green-50 text-green-700'
-                  : 'border-gray-300 bg-white text-gray-500 hover:border-indigo-400'
-              }`}
+              className={`ob-id-upload-btn w-full px-3 py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer transition ${idFileName
+                ? 'border-green-300 bg-green-50 text-green-700'
+                : 'border-gray-300 bg-white text-gray-500 hover:border-indigo-400'
+                }`}
             >
               <span className="text-sm">⬆</span>
               <span>{idFileName || 'Click to upload ID card (JPG/PNG/PDF)'}</span>

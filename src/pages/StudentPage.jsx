@@ -491,7 +491,7 @@ export default function StudentPage() {
             <ul className="benefit-list list-none space-y-3 mb-5" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <li className="flex items-start gap-2 text-sm text-gray-600" style={{ position: 'relative' }}>
                 <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ marginTop: '2px' }}>✓</span>
-                <span style={{ flex: 1, lineHeight: '1.6' }}>Earn <strong>₹66 per session</strong> — flexible, work from your hostel room.</span>
+                <span style={{ flex: 1, lineHeight: '1.6' }}>Earn <strong>₹{CONFIG.MENTOR_PAYOUT} per session</strong> — flexible, work from your hostel room.</span>
               </li>
               <li className="flex items-start gap-2 text-sm text-gray-600" style={{ position: 'relative' }}>
                 <span className="w-5 h-5 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ marginTop: '2px' }}>✓</span>
