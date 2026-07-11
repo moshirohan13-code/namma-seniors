@@ -29,6 +29,8 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
         can_help_with: app.can_help_with || '',
         background: app.background || '',
         id_card_url: app.id_card_url || '',
+        youtube_link: app.youtube_link || '',
+        instagram_link: app.instagram_link || '',
         payout_per_session: CONFIG.MENTOR_PAYOUT, // Must be 65 to match SQL
         status: 'approved',
         featured: false,

@@ -12,7 +12,9 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
     phone: studentSession?.phone || '',
     languages: '',
     home_location: '',
-    career_help: ''
+    career_help: '',
+    youtube_link: '',
+    instagram_link: ''
   });
 
   const [selectedExams, setSelectedExams] = useState(new Set());
@@ -65,6 +67,12 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
     if (!selectedExams.size) return showToast('⚠️ Select at least one exam.');
     if (!/^\d{10}$/.test(formData.phone)) return showToast('⚠️ Enter valid 10-digit number.');
     if (!idFile) return showToast('⚠️ Upload college ID card.');
+    if (formData.youtube_link && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(formData.youtube_link.trim())) {
+      return showToast('⚠️ Enter a valid YouTube link (must start with https://youtube.com or https://youtu.be).');
+    }
+    if (formData.instagram_link && !/^https:\/\/(www\.)?instagram\.com\//i.test(formData.instagram_link.trim())) {
+      return showToast('⚠️ Enter a valid Instagram link (must start with https://instagram.com).');
+    }
 
     setSubmitting(true);
 
@@ -94,6 +102,8 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
         languages: formData.languages,
         home_location: formData.home_location,
         can_help_with: formData.career_help,
+        youtube_link: formData.youtube_link.trim(),
+        instagram_link: formData.instagram_link.trim(),
         id_card_url: idCardUrl,
         status: 'pending',
         payout_per_session: CONFIG.MENTOR_PAYOUT,
@@ -415,6 +425,34 @@ export default function OnboardingModal({ studentSession, onClose, showToast }) 
               onChange={e => handleInputChange('career_help', e.target.value)}
               placeholder="e.g., Google, Amazon, internship preparation, resume reviews, placement interviews"
               className="ob-f-input w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 min-h-[88px] resize-vertical"
+            />
+          </div>
+
+          {/* YouTube Link (Optional) */}
+          <div className="ob-f-group mb-3">
+            <label className="ob-f-label block mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              YouTube Channel Link <span className="normal-case tracking-normal text-gray-400">(Optional)</span>
+            </label>
+            <input
+              type="url"
+              value={formData.youtube_link}
+              onChange={e => handleInputChange('youtube_link', e.target.value)}
+              placeholder="https://youtube.com/@yourchannel"
+              className="ob-f-input w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
+            />
+          </div>
+
+          {/* Instagram Link (Optional) */}
+          <div className="ob-f-group mb-3">
+            <label className="ob-f-label block mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Instagram Link <span className="normal-case tracking-normal text-gray-400">(Optional)</span>
+            </label>
+            <input
+              type="url"
+              value={formData.instagram_link}
+              onChange={e => handleInputChange('instagram_link', e.target.value)}
+              placeholder="https://instagram.com/yourhandle"
+              className="ob-f-input w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
             />
           </div>
 

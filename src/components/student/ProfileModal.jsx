@@ -16,6 +16,9 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
     .filter(Boolean);
   const bg = String(mentor.background || '').trim();
 
+  const safeYoutube = isSafeSocialUrl(mentor.youtube_link, ['youtube.com', 'www.youtube.com', 'youtu.be']);
+  const safeInstagram = isSafeSocialUrl(mentor.instagram_link, ['instagram.com', 'www.instagram.com']);
+
   return (
     <div className="m-overlay fixed inset-0 z-[800] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md" onClick={onClose}>
       <div
@@ -74,6 +77,33 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
                 {mentor.year && <DetailItem icon="📅" label="Academic Year" value={mentor.year} />}
                 {mentor.home_location && <DetailItem icon="📍" label="Home Location" value={mentor.home_location} />}
               </div>
+
+              {(safeYoutube || safeInstagram) && (
+                <div className="profile-social-links flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                  {safeYoutube && (
+                    <a
+                      href={safeYoutube}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      onClick={e => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition"
+                    >
+                      ▶️ YouTube
+                    </a>
+                  )}
+                  {safeInstagram && (
+                    <a
+                      href={safeInstagram}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow"
+                      onClick={e => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-pink-50 border border-pink-200 text-pink-600 hover:bg-pink-100 transition"
+                    >
+                      📸 Instagram
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -142,6 +172,18 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
       </div>
     </div>
   );
+}
+
+function isSafeSocialUrl(url, allowedHosts) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return null;
+    if (!allowedHosts.includes(parsed.hostname.toLowerCase())) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 function DetailItem({ icon, label, value }) {

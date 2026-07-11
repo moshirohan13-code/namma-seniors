@@ -104,6 +104,34 @@ function PersonDetails({ data, type }) {
     </div>
   ) : null;
 
+  const safeYoutube = isSafeSocialUrl(data.youtube_link, ['youtube.com', 'www.youtube.com', 'youtu.be']);
+  const safeInstagram = isSafeSocialUrl(data.instagram_link, ['instagram.com', 'www.instagram.com']);
+
+  const socialLinksSection = (safeYoutube || safeInstagram) ? (
+    <div className="mt-4 flex gap-2">
+      {safeYoutube && (
+        <a
+          href={safeYoutube}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="inline-flex items-center gap-1 text-red-600 font-bold text-xs bg-red-50 px-3 py-2 rounded-lg border border-red-200 no-underline hover:bg-red-100 transition"
+        >
+          ▶️ YouTube
+        </a>
+      )}
+      {safeInstagram && (
+        <a
+          href={safeInstagram}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className="inline-flex items-center gap-1 text-pink-600 font-bold text-xs bg-pink-50 px-3 py-2 rounded-lg border border-pink-200 no-underline hover:bg-pink-100 transition"
+        >
+          📸 Instagram
+        </a>
+      )}
+    </div>
+  ) : null;
+
   return (
     <>
       <div className="detail-grid grid grid-cols-2 gap-2">
@@ -127,6 +155,7 @@ function PersonDetails({ data, type }) {
       </div>
 
       {experienceSection}
+      {socialLinksSection}
 
       {data.background && (
         <div className="mt-3">
@@ -148,6 +177,18 @@ function PersonDetails({ data, type }) {
       )}
     </>
   );
+}
+
+function isSafeSocialUrl(url, allowedHosts) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return null;
+    if (!allowedHosts.includes(parsed.hostname.toLowerCase())) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 function DetailSlot({ label, value, fullWidth = false }) {
