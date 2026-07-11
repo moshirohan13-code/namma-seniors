@@ -13,6 +13,7 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminPassError, setAdminPassError] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   const handleContinue = async () => {
     const emailOk = isValidEmail(email);
@@ -24,13 +25,16 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
 
     if (!emailOk || !phoneOk) return;
 
-    // Check if admin credentials
-    const normalizedEmail = email.toLowerCase().trim();
-    const normalizedAdminEmail = (CONFIG.ADMIN_EMAIL || '').toLowerCase().trim();
-    const cleanPhone = phone.replace(/\D/g, '');
-    const cleanAdminPhone = (CONFIG.ADMIN_PHONE || '').replace(/\D/g, '').slice(-10); // Last 10 digits
+    // Check if this matches admin credentials — done securely server-side,
+    // no admin email/phone is ever stored or compared in the browser.
+    setLoading(true);
+    const { data, error: rpcError } = await supabase.rpc('verify_admin_identity', {
+      input_email: email,
+      input_phone: phone
+    });
+    setLoading(false);
 
-    if (normalizedEmail === normalizedAdminEmail && cleanPhone === cleanAdminPhone) {
+    if (!rpcError && data === true) {
       setShowAdminPassword(true);
       return;
     }
@@ -62,8 +66,15 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
       setLoading(false);
     }
   };
-  const verifyAdminPassword = () => {
-    if (adminPassword === CONFIG.ADMIN_PASSWORD) {
+
+  const verifyAdminPassword = async () => {
+    setVerifying(true);
+    const { data, error: rpcError } = await supabase.rpc('verify_admin_password', {
+      input_password: adminPassword
+    });
+    setVerifying(false);
+
+    if (!rpcError && data === true) {
       sessionStorage.setItem('ns_admin_authed', '1');
       // Save admin session before redirect
       localStorage.setItem(CONFIG.SESSION_KEY, JSON.stringify({ email, phone }));
@@ -109,9 +120,10 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
             </button>
             <button
               onClick={verifyAdminPassword}
-              className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-bold hover:shadow-lg transition"
+              disabled={verifying}
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-bold hover:shadow-lg transition disabled:opacity-50"
             >
-              Verify →
+              {verifying ? 'Checking…' : 'Verify →'}
             </button>
           </div>
         </div>

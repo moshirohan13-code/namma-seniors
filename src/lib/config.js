@@ -5,8 +5,6 @@
 console.log('🔍 Environment check:', {
   hasSupabaseUrl: !!import.meta.env.VITE_SUPABASE_URL,
   hasSupabaseKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
-  hasAdminEmail: !!import.meta.env.VITE_ADMIN_EMAIL,
-  supabaseUrlPreview: import.meta.env.VITE_SUPABASE_URL?.slice(0, 30) + '...',
 });
 
 export const CONFIG = {
@@ -14,9 +12,7 @@ export const CONFIG = {
   SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
   SUPABASE_ANON: import.meta.env.VITE_SUPABASE_ANON_KEY,
 
-  // Admin (server-side validation recommended in production)
-  ADMIN_EMAIL: import.meta.env.VITE_ADMIN_EMAIL,
-  ADMIN_PASSWORD: import.meta.env.VITE_ADMIN_PASSWORD,
+  // Admin phone (used for support contact display — not a secret)
   ADMIN_PHONE: import.meta.env.VITE_ADMIN_PHONE,
 
   // Business
@@ -36,8 +32,6 @@ export const CONFIG = {
 const required = [
   'VITE_SUPABASE_URL',
   'VITE_SUPABASE_ANON_KEY',
-  'VITE_ADMIN_EMAIL',
-  'VITE_ADMIN_PASSWORD',
   'VITE_UPI_ID'
 ];
 

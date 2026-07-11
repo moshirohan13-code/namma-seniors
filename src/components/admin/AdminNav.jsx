@@ -1,8 +1,4 @@
-import { CONFIG } from '../../lib/config';
-
 export default function AdminNav({ onSignOut }) {
-  const adminEmail = CONFIG.ADMIN_EMAIL;
-
   return (
     <nav className="adm-nav bg-gradient-to-r from-indigo-700 via-indigo-600 to-purple-600 h-16 px-7 flex items-center justify-between shadow-xl sticky top-0 z-[100]">
       <div className="adm-nav-left flex items-center gap-3">
@@ -17,9 +13,6 @@ export default function AdminNav({ onSignOut }) {
             Namma Seniors – Operations Console
           </div>
         </div>
-        <span className="nav-admin-email hidden sm:inline-flex text-[10px] text-indigo-200 bg-white/10 px-3 py-1 rounded-full border border-white/20 ml-3">
-          {adminEmail}
-        </span>
         <span className="rt-badge inline-flex items-center gap-1 bg-green-500/20 border border-green-400/40 text-green-300 rounded-full px-3 py-1 text-[10px] font-bold ml-3">
           <span className="rt-dot w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> LIVE
         </span>
