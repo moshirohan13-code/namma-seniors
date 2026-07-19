@@ -46,12 +46,10 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
     setLoading(true);
     try {
       // Use Supabase client's upsert instead of raw REST API
-      const { error } = await supabase
-        .from('students')
-        .upsert(
-          { email, phone, last_seen: new Date().toISOString() },
-          { onConflict: 'email', ignoreDuplicates: false }
-        );
+      const { error } = await supabase.rpc('upsert_student', {
+        p_email: email,
+        p_phone: phone
+      });
 
       if (error) {
         console.error('[Students upsert error]', error);
