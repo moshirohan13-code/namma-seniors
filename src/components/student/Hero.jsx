@@ -1,6 +1,5 @@
 import { CONFIG } from '../../lib/config';
-
-export default function Hero({ onFreeSessionClick, onRegisterClick }) {
+export default function Hero({ onRegisterClick, onCounsellingClick }) {
   return (
     <section className="hero relative text-white text-center py-20 px-5 overflow-hidden" style={{
       background: 'radial-gradient(ellipse at top left, #818cf8 0%, #6366f1 30%, #7c3aed 70%, #a855f7 100%)',
@@ -38,11 +37,11 @@ export default function Hero({ onFreeSessionClick, onRegisterClick }) {
 
         <div className="flex flex-row justify-center items-stretch gap-3 flex-wrap max-w-md mx-auto">
           <button
-            onClick={onFreeSessionClick}
-            className="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
+            onClick={onCounsellingClick}
+            className="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
           >
-            <span className="flex-shrink-0">📞</span>
-            <span className="whitespace-nowrap">Book Free Session</span>
+            <span className="flex-shrink-0">📚</span>
+            <span className="whitespace-nowrap">Counselling</span>
           </button>
           <button
             onClick={onRegisterClick}

@@ -21,12 +21,6 @@ export default function CheckoutModal({
   const [chatAnswers, setChatAnswers] = useState({});
   const [showTextInput, setShowTextInput] = useState(false);
   const [textValue, setTextValue] = useState('');
-  useEffect(() => {
-    if (!chatStarted) return;
-    setIsTyping(true);
-    const t = setTimeout(() => setIsTyping(false), 700);
-    return () => clearTimeout(t);
-  }, [chatStarted, chatStep]);
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
@@ -141,17 +135,7 @@ export default function CheckoutModal({
       .catch(() => showToast(`UPI: ${CONFIG.UPI_ID}`));
   };
 
-  const copyName = () => {
-    navigator.clipboard
-      .writeText('Rohan Moshi')
-      .then(() => showToast('✅ Name copied!'))
-      .catch(() => showToast('Rohan Moshi'));
-  };
-
-
   const studentName = (studentSession?.email || '').split('@')[0] || 'Student';
-  const studentPhone = studentSession?.phone || '—';
-  const studentEmail = studentSession?.email || '—';
 
   return (
     <div className="m-overlay fixed inset-0 z-[800] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md" onClick={onClose}>
@@ -179,7 +163,6 @@ export default function CheckoutModal({
             <div id="checkoutPaymentSection">
               {/* QR Section */}
               <div className="qr-section text-center p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 mb-4">
-
                 <div className="qr-img-wrap flex justify-center mb-2">
                   <img
                     src="/qr-code.png"
@@ -200,7 +183,7 @@ export default function CheckoutModal({
                 <div className="qr-hint text-gray-500 text-[11px]">Scan with any UPI app</div>
               </div>
 
-              {/* Copy UPI / Name */}
+              {/* Copy UPI */}
               <div className="flex flex-col gap-2 mb-4">
                 <div className="upi-id-copy flex items-center justify-between px-3 py-2">
                   <span className="upi-id-text text-sm font-semibold">{CONFIG.UPI_ID}</span>
@@ -208,7 +191,6 @@ export default function CheckoutModal({
                     <CopyIcon />
                   </button>
                 </div>
-
               </div>
 
               {/* Student Details */}

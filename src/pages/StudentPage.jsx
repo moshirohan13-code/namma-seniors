@@ -25,6 +25,8 @@ import CheckoutModal from '../components/student/CheckoutModal';
 import MyBookingsModal from '../components/student/MyBookingsModal';
 import OnboardingModal from '../components/student/OnboardingModal';
 import FreeSessionModal from '../components/student/FreeSessionModal';
+import CounsellingModal from '../components/student/CounsellingModal';
+import PriorityOrderModal from '../components/student/PriorityOrderModal';
 import Toast from '../components/common/Toast';
 import LiveUpdateToast from '../components/common/LiveUpdateToast';
 
@@ -63,6 +65,9 @@ export default function StudentPage() {
   const [showMyBookings, setShowMyBookings] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showFreeSession, setShowFreeSession] = useState(false);
+  const [showCounselling, setShowCounselling] = useState(false);
+  const [selectedPdfSlug, setSelectedPdfSlug] = useState(null);
+  const [showPriorityOrder, setShowPriorityOrder] = useState(false);
 
   // ── CHECKOUT STATE ──
   const [checkoutStep, setCheckoutStep] = useState('payment'); // 'payment' | 'success'
@@ -362,16 +367,12 @@ export default function StudentPage() {
 
       {/* Hero */}
       <Hero
-        onFreeSessionClick={() => {
-          requireLogin(() => {
-            setShowFreeSession(true);
-          }, '⚠️ Please log in to book a free session.');
-        }}
         onRegisterClick={() => {
           requireLogin(() => {
             setShowOnboarding(true);
           }, '⚠️ Please log in to register as a mentor.');
         }}
+        onCounsellingClick={() => setShowCounselling(true)}
       />
 
       {/* Banner removed - Register as Senior moved to Hero */}
@@ -566,12 +567,7 @@ export default function StudentPage() {
           step={checkoutStep}
           paymentProofUrl={paymentProofUrl}
           onPaymentProofUpload={setPaymentProofUrl}
-          onConfirm={async (chatAnswers) => {
-            if (!paymentProofUrl) {
-              showToastMessage('⚠️ Upload payment screenshot first.', 'top');
-              return;
-            }
-
+          onConfirm={async (chatAnswers, paymentInfo) => {
             const studentName = (studentSession.email || '').split('@')[0] || 'Student';
             const studentPhone = studentSession.phone || '—';
             const studentEmail = studentSession.email || '—';
@@ -595,6 +591,8 @@ export default function StudentPage() {
                   student_phone: studentPhone,
                   student_email: studentEmail,
                   payment_proof_url: paymentProofUrl,
+                  razorpay_order_id: paymentInfo?.razorpay_order_id || null,
+                  razorpay_payment_id: paymentInfo?.razorpay_payment_id || null,
                   requirement_message: requirementSummary,
                   requirement_qna: qna,
                   session_fee: CONFIG.SESSION_FEE,
@@ -645,6 +643,27 @@ export default function StudentPage() {
         />
       )}
 
+      {showCounselling && (
+        <CounsellingModal
+          onClose={() => setShowCounselling(false)}
+          onSelectPdf={(slug) => {
+            setShowCounselling(false);
+            requireLogin(() => {
+              setSelectedPdfSlug(slug);
+              setShowPriorityOrder(true);
+            }, '⚠️ Please log in to purchase this guide.');
+          }}
+        />
+      )}
+
+      {showPriorityOrder && selectedPdfSlug && (
+        <PriorityOrderModal
+          pdfSlug={selectedPdfSlug}
+          studentSession={studentSession}
+          onClose={() => setShowPriorityOrder(false)}
+          showToast={showToastMessage}
+        />
+      )}
       {/* Toasts */}
       {showToast && <Toast message={toastMessage} position={toastPosition} />}
       {showLiveUpdate && <LiveUpdateToast message={liveUpdateMessage} />}

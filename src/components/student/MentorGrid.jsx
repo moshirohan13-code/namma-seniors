@@ -41,7 +41,7 @@ export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession 
 
   return (
     <>
-      <div className="mentor-grid max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="mentor-grid max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {visibleMentors.map(mentor => (
           <MentorCard key={mentor.id} mentor={mentor} onBook={onBookSession} />
         ))}

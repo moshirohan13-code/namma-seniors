@@ -12,6 +12,7 @@ import FreeRequestsPanel from '../components/admin/FreeRequestsPanel';
 import MentorsPanel from '../components/admin/MentorsPanel';
 import ApprovalsPanel from '../components/admin/ApprovalsPanel';
 import StudentsPanel from '../components/admin/StudentsPanel';
+import PdfPurchasesPanel from '../components/admin/PdfPurchasesPanel';
 import AdminToast from '../components/admin/AdminToast';
 import RTNotification from '../components/admin/RTNotification';
 import Lightbox from '../components/admin/Lightbox';
@@ -33,6 +34,7 @@ export default function AdminPage() {
   const [mentors, setMentors] = useState([]);
   const [applications, setApplications] = useState([]);
   const [students, setStudents] = useState([]);
+  const [pdfPurchases, setPdfPurchases] = useState([]);
 
   // Toast & Notifications
   const [toastMessage, setToastMessage] = useState('');
@@ -57,9 +59,23 @@ export default function AdminPage() {
   // ══════════════════════════════════════════════════════════
 
   useEffect(() => {
-    const isAuthed = sessionStorage.getItem('ns_admin_authed') === '1';
-    console.log('🔐 Admin auth status:', isAuthed);
-    setIsAuthenticated(isAuthed);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) {
+        setIsAuthenticated(false);
+        return;
+      }
+      const { data: adminRow } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      setIsAuthenticated(!!adminRow);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) setIsAuthenticated(false);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   // ══════════════════════════════════════════════════════════
@@ -100,7 +116,8 @@ export default function AdminPage() {
       fetchBookings(),
       fetchMentors(),
       fetchApplications(),
-      fetchStudents()
+      fetchStudents(),
+      fetchPdfPurchases()
     ]);
   }
 
@@ -148,7 +165,6 @@ export default function AdminPage() {
       setApplications([]);
     }
   }
-
   async function fetchStudents() {
     try {
       const { data, error } = await supabase
@@ -160,6 +176,20 @@ export default function AdminPage() {
     } catch (e) {
       console.warn('[Students]', e);
       setStudents([]);
+    }
+  }
+
+  async function fetchPdfPurchases() {
+    try {
+      const { data, error } = await supabase
+        .from('pdf_purchases')
+        .select('*, pdfs(title, slug, price)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPdfPurchases(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn('[PdfPurchases]', e);
+      setPdfPurchases([]);
     }
   }
 
@@ -320,7 +350,8 @@ export default function AdminPage() {
         if (key) map[key] = true;
       });
       return Object.keys(map).length;
-    })()
+    })(),
+    pdfs: pdfPurchases.length
   };
 
   // ══════════════════════════════════════════════════════════
@@ -330,8 +361,8 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-100">
       <AdminNav
-        onSignOut={() => {
-          sessionStorage.removeItem('ns_admin_authed');
+        onSignOut={async () => {
+          await supabase.auth.signOut();
           setIsAuthenticated(false);
           window.location.href = '/';
         }}
@@ -395,6 +426,10 @@ export default function AdminPage() {
 
         {activeTab === 'students' && (
           <StudentsPanel bookings={bookings} students={students} onRefresh={loadAll} />
+        )}
+
+        {activeTab === 'pdfs' && (
+          <PdfPurchasesPanel purchases={pdfPurchases} onRefresh={loadAll} />
         )}
       </div>
 

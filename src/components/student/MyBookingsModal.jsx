@@ -1,4 +1,4 @@
-import { fmtDate } from '../../utils/helpers';
+import { fmtDate, fmtTime } from '../../utils/helpers';
 import { CONFIG } from '../../lib/config';
 
 const STATUS_META = {
@@ -42,14 +42,17 @@ export default function MyBookingsModal({ bookings, onClose }) {
               return (
                 <div
                   key={b.id}
-                  className={`booking-card bg-white border rounded-xl p-3 mb-2 shadow-sm ${
-                    s.live ? 'border-green-200' : 'border-gray-200'
-                  }`}
+                  className={`booking-card bg-white border rounded-xl p-3 mb-2 shadow-sm ${s.live ? 'border-green-200' : 'border-gray-200'
+                    }`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="text-sm font-bold">{b.mentor_name || 'Session'}</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">{fmtDate(b.created_at)}</div>
+                      <div className="text-[11px] text-gray-400 mt-0.5">
+                        {b.scheduled_at
+                          ? `🕐 ${fmtDate(b.scheduled_at)}, ${fmtTime(b.scheduled_at)}`
+                          : `Booked on ${fmtDate(b.created_at)}`}
+                      </div>
                     </div>
                     <span
                       className="booking-status-pill px-2 py-1 rounded-full text-[10px] font-bold"

@@ -45,22 +45,19 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
   const submitLogin = async () => {
     setLoading(true);
     try {
-      // Use Supabase client's upsert instead of raw REST API
-      const { error } = await supabase
-        .from('students')
-        .upsert(
-          { email, phone, last_seen: new Date().toISOString() },
-          { onConflict: 'email', ignoreDuplicates: false }
-        );
+      const { error } = await supabase.rpc('upsert_student', {
+        p_email: email,
+        p_phone: phone
+      });
 
       if (error) {
-        console.error('[Students upsert error]', error);
+        console.error('[upsert_student RPC error]', error);
         throw error;
       }
 
       onSuccess({ email, phone });
     } catch (e) {
-      console.error('[Students upsert failed]', e);
+      console.error('[upsert_student RPC failed]', e);
       showToast('⚠️ Could not save session: ' + (e.message || 'Unknown error'));
     } finally {
       setLoading(false);
