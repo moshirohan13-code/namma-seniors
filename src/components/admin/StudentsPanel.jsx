@@ -200,9 +200,10 @@ export default function StudentsPanel({ bookings, students, onRefresh }) {
 function WhatsAppLink({ phone }) {
   const clean = String(phone).replace(/\D/g, '');
   const num = clean.startsWith('91') ? clean : '91' + clean;
+  const message = "Hi! I'm Rohan from Namma Seniors 😊 How can I help you today? If you'd like to book a mentorship session or talk with a senior, feel free to book directly on our website — nammaseniors.com. We're here to help you succeed! 🎓";
   return (
     <a
-      href={`https://wa.me/${num}`}
+      href={`https://wa.me/${num}?text=${encodeURIComponent(message)}`}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full text-[11px] ml-1 hover:scale-110 transition"
