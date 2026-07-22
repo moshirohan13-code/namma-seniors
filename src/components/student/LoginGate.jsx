@@ -45,6 +45,7 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
   const submitLogin = async () => {
     setLoading(true);
     try {
+      // Use Supabase client's upsert instead of raw REST API
       const { error } = await supabase.rpc('upsert_student', {
         p_email: email,
         p_phone: phone

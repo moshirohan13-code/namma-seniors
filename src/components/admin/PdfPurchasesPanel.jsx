@@ -7,8 +7,8 @@ export default function PdfPurchasesPanel({ purchases, onRefresh }) {
         failed: 'bg-red-100 text-red-800'
     };
 
-    async function markVerified(id) {
-        const { error } = await supabase.from('pdf_purchases').update({ status: 'completed' }).eq('id', id);
+    async function updateStatus(id, status) {
+        const { error } = await supabase.from('pdf_purchases').update({ status }).eq('id', id);
         if (!error) onRefresh();
     }
 
@@ -77,22 +77,15 @@ export default function PdfPurchasesPanel({ purchases, onRefresh }) {
                                         ) : '—'}
                                     </td>
                                     <td className="py-3 pr-4">
-                                        <div className="flex items-center gap-2">
-                                            <span
-                                                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${statusStyles[p.status] || 'bg-gray-100 text-gray-600'
-                                                    }`}
-                                            >
-                                                {p.status || 'unknown'}
-                                            </span>
-                                            {p.status === 'pending' && (
-                                                <button
-                                                    onClick={() => markVerified(p.id)}
-                                                    className="text-[10px] font-bold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 hover:bg-green-100 transition"
-                                                >
-                                                    ✅ Verify
-                                                </button>
-                                            )}
-                                        </div>
+                                        <select
+                                            value={p.status || 'pending'}
+                                            onChange={e => updateStatus(p.id, e.target.value)}
+                                            className={`px-2 py-1 rounded-full text-[10px] font-black border-0 cursor-pointer outline-none ${statusStyles[p.status] || 'bg-gray-100 text-gray-600'
+                                                }`}
+                                        >
+                                            <option value="pending">Pending</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
                                     </td>
                                     <td className="py-3 pr-4 text-gray-500">
                                         {p.created_at ? new Date(p.created_at).toLocaleString() : '—'}

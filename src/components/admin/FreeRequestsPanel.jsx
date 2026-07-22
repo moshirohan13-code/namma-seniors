@@ -169,9 +169,10 @@ export default function FreeRequestsPanel({ freeRequests, onRefresh, showToast }
 function WhatsAppLink({ phone }) {
   const clean = String(phone).replace(/\D/g, '');
   const num = clean.startsWith('91') ? clean : '91' + clean;
+  const message = "Hello! Rohan here from Namma Seniors. 😊 If you need any assistance or want to book a mentorship session, please visit our website at nammaseniors.com. We are here to help you succeed!";
   return (
     <a
-      href={`https://wa.me/${num}`}
+      href={`https://wa.me/${num}?text=${encodeURIComponent(message)}`}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full text-[11px] ml-1 hover:scale-110 transition"
