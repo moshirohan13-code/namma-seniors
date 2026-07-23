@@ -226,7 +226,7 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                             <div className="text-center p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 mb-4">
                                 <div className="flex justify-center mb-2">
                                     <img
-                                        src="/qr-pdf-49.png"
+                                        src={pdfInfo?.price === 159 ? '/qr-pdf-159.png' : '/qr-pdf-49.png'}
                                         alt="UPI QR"
                                         width="220"
                                         height="220"
