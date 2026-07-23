@@ -58,7 +58,7 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
                 </h2>
 
                 <p className="text-sm text-gray-500 mb-5">
-                    Pick a guide to unlock — ₹49 each.
+                    Pick a guide to unlock.
                 </p>
 
                 {loading && (
