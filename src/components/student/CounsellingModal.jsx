@@ -100,7 +100,7 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
                                     </span>
                                 </button>
 
-                                {pdf.slug !== "govt-semi-govt-cutoff" && (
+                                {!pdf.title.includes("Cutoff Analysis") && (
 
                                     <a
                                         href="https://youtu.be/rpgYp1yEUec?si=lxGUcOFj3GDEVDRy"
