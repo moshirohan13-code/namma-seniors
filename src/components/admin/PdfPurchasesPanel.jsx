@@ -52,7 +52,7 @@ export default function PdfPurchasesPanel({ purchases, onRefresh }) {
                                             <span>{p.student_phone || '—'}</span>
                                             {p.student_phone && (
                                                 <a
-                                                    href={`https://wa.me/91${p.student_phone}?text=${encodeURIComponent(`Hi ${p.student_name || 'there'}, thank you for buying the "${p.pdfs?.title || 'guide'}" from Namma Seniors! 🎓📚 I'll be sharing your PDF with you shortly. Thank you for your patience!`)}`}
+                                                    href={`https://wa.me/91${p.student_phone}?text=${encodeURIComponent(`Hi ${p.student_name || 'there'}, thank you for purchasing "${p.pdfs?.title || 'guide'}" from Namma Seniors! 🎓 Your guide is unlocked and ready to view in the app — just log in and open it anytime. Wishing you the best for your admissions! 🌟`)}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     title="Message on WhatsApp"

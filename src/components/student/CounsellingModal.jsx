@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function CounsellingModal({ onClose, onSelectPdf }) {
     const [pdfs, setPdfs] = useState([]);
@@ -14,14 +14,14 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
             setError(null);
 
             const { data, error } = await supabase
-                .from('pdfs')
-                .select('id, title, slug, price')
-                .order('price', { ascending: false });
+                .from("pdfs")
+                .select("id,title,slug,price")
+                .order("price", { ascending: false });
 
             if (cancelled) return;
 
             if (error) {
-                setError('Could not load guides right now. Please try again.');
+                setError("Could not load guides right now.");
             } else {
                 setPdfs(data || []);
             }
@@ -47,89 +47,99 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl leading-none"
-                    aria-label="Close"
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl"
                 >
                     ✕
                 </button>
 
-                <h2 className="text-lg font-bold text-gray-900 mb-1">
+                <h2 className="text-lg font-bold mb-2">
                     🔒 Priority Order Guides
                 </h2>
 
-                <p className="text-sm text-gray-500 mb-5">
+                <p className="text-gray-500 text-sm mb-5">
                     Pick a guide to unlock.
                 </p>
 
                 {loading && (
-                    <div className="text-sm text-gray-500 py-6 text-center">
-                        Loading guides…
+                    <div className="text-center py-6">
+                        Loading guides...
                     </div>
                 )}
 
                 {!loading && error && (
-                    <div className="text-sm text-red-500 py-6 text-center">
+                    <div className="text-center text-red-500 py-6">
                         {error}
                     </div>
                 )}
 
                 {!loading && !error && pdfs.length === 0 && (
-                    <div className="text-sm text-gray-500 py-6 text-center">
-                        No guides available right now.
+                    <div className="text-center py-6">
+                        No guides available.
                     </div>
                 )}
 
                 {!loading && !error && pdfs.length > 0 && (
                     <div className="flex flex-col gap-3">
+                        {pdfs.map((pdf) => {
+                            const isCutoffAnalysis =
+                                pdf.title.includes("Cutoff Analysis");
 
-                        {pdfs.map((pdf) => (
+                            const isExtraFees =
+                                pdf.title.includes("Extra Fees");
 
-                            <div
-                                key={pdf.id}
-                                className="w-full flex items-center gap-2"
-                            >
+                            const isGovtSemiGovtPriority =
+                                pdf.title.includes(
+                                    "Government and Semi-Government Priority Order"
+                                );
 
-                                <button
-                                    onClick={() => onSelectPdf(pdf.slug)}
-                                    className="flex-1 inline-flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-900 text-sm font-bold hover:bg-indigo-100 transition text-left"
+                            const showVideoButton =
+                                !isCutoffAnalysis && !isExtraFees;
+
+                            const videoUrl = isGovtSemiGovtPriority
+                                ? "https://youtu.be/iMvHWYZ05SY?si=r0zk12KPChkGpuJy"
+                                : "https://youtu.be/rpgYp1yEUec?si=lxGUcOFj3GDEVDRy";
+
+                            return (
+                                <div
+                                    key={pdf.id}
+                                    className="flex items-center gap-2"
                                 >
-                                    <span>🔒 {pdf.title}</span>
-
-                                    <span className="whitespace-nowrap">
-                                        ₹{pdf.price}
-                                    </span>
-                                </button>
-
-                                {!pdf.title.includes("Cutoff Analysis") && (
-
-                                    <a
-                                        href="https://youtu.be/rpgYp1yEUec?si=lxGUcOFj3GDEVDRy"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        title="Watch preview video"
-                                        className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition"
+                                    <button
+                                        onClick={() => onSelectPdf(pdf.slug)}
+                                        className="flex-1 flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 hover:bg-indigo-100"
                                     >
+                                        <span className="text-left">
+                                            🔒 {pdf.title}
+                                        </span>
 
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            className="w-5 h-5"
-                                            fill="#FF0000"
+                                        <span className="flex-shrink-0 w-14 text-right">
+                                            ₹{pdf.price}
+                                        </span>
+                                    </button>
+
+                                    {showVideoButton && (
+                                        <a
+                                            href={videoUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="flex-shrink-0 self-center w-10 h-10 flex items-center justify-center rounded-full border hover:bg-gray-100"
+                                            title="Watch Preview"
                                         >
-                                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                                        </svg>
-
-                                    </a>
-
-                                )}
-
-                            </div>
-
-                        ))}
-
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className="w-5 h-5"
+                                                fill="#FF0000"
+                                            >
+                                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                            </svg>
+                                        </a>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
-
             </div>
         </div>
     );

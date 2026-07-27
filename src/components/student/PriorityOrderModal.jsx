@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase, sbUpload } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 async function stampWatermark(signedUrl, watermarkText) {
     const existingPdfBytes = await fetch(signedUrl).then(res => res.arrayBuffer());
@@ -50,13 +50,11 @@ async function renderPdfToCanvases(blobUrl, container) {
 }
 
 export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, showToast }) {
-    const [stage, setStage] = useState('checking'); // 'checking' | 'form' | 'submitting' | 'submitted' | 'viewer' | 'error'
-    const [pdfInfo, setPdfInfo] = useState(null); // { id, title, price }
+    const [stage, setStage] = useState('checking'); // 'checking' | 'form' | 'paying' | 'viewer' | 'error'
+    const [pdfInfo, setPdfInfo] = useState(null);
     const [signedUrl, setSignedUrl] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
-    const [proofFile, setProofFile] = useState(null);
-    const [proofFileName, setProofFileName] = useState('');
-    const [uploading, setUploading] = useState(false);
+    const [paying, setPaying] = useState(false);
     const iframeWrapRef = useRef(null);
     const canvasContainerRef = useRef(null);
 
@@ -107,60 +105,95 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
         }
     }, [stage, signedUrl]);
 
-    function handleFileChange(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (file.size > 10 * 1024 * 1024) {
-            if (showToast) showToast('⚠️ Max 10MB.');
-            e.target.value = '';
-            return;
-        }
-        setProofFile(file);
-        setProofFileName(file.name);
-    }
-
-    async function handleSubmit() {
-        if (!proofFile) {
-            if (showToast) showToast('⚠️ Please upload your payment screenshot first.');
-            return;
-        }
+    async function handlePay() {
         if (!studentName.trim() || !studentPhone.trim()) {
             if (showToast) showToast('⚠️ Please fill in your name and WhatsApp number.');
             return;
         }
+        if (!window.Razorpay) {
+            if (showToast) showToast('⚠️ Payment system still loading, please try again in a moment.');
+            return;
+        }
 
-        setUploading(true);
-        setStage('submitting');
+        setPaying(true);
+        setStage('paying');
 
         try {
-            const safePhone = studentPhone.replace(/\D/g, '');
-            const ext = proofFile.name.split('.').pop().toLowerCase() || 'jpg';
-            const proofUrl = await sbUpload(
-                'booking-proofs',
-                `pdf-proofs/${safePhone}_${pdfSlug}_${Date.now()}.${ext}`,
-                proofFile
-            );
-
-            const { error: insertError } = await supabase.from('pdf_purchases').insert({
-                pdf_id: pdfInfo.id,
-                student_name: studentName.trim(),
-                student_email: studentEmail,
-                student_phone: safePhone,
-                amount: pdfInfo.price,
-                status: 'pending',
-                payment_proof_url: proofUrl
+            const { data: orderData, error: orderError } = await supabase.functions.invoke('create-pdf-order', {
+                body: { pdf_slug: pdfSlug }
             });
 
-            if (insertError) throw insertError;
+            if (orderError || !orderData?.order_id) {
+                throw new Error(orderData?.error || orderError?.message || 'Could not start payment.');
+            }
 
-            setStage('submitted');
-            if (showToast) showToast('✅ Screenshot submitted! We\'ll verify and send your guide via WhatsApp shortly.');
+            const rzp = new window.Razorpay({
+                key: orderData.key_id,
+                amount: orderData.amount,
+                currency: 'INR',
+                name: 'Namma Seniors',
+                description: orderData.pdf_title || pdfInfo?.title || 'Priority Order Guide',
+                order_id: orderData.order_id,
+                prefill: {
+                    name: studentName,
+                    email: studentEmail,
+                    contact: studentPhone
+                },
+                theme: { color: '#4f46e5' },
+                handler: async function (response) {
+                    try {
+                        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-pdf-payment', {
+                            body: {
+                                pdf_slug: pdfSlug,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                student_name: studentName.trim(),
+                                student_email: studentEmail,
+                                student_phone: studentPhone.replace(/\D/g, '')
+                            }
+                        });
+                        console.log('[PriorityOrderModal] verifyData:', verifyData);
+                        console.log('[PriorityOrderModal] verifyError:', verifyError);
+
+                        if (verifyError || !verifyData?.signed_url) {
+                            throw new Error(verifyData?.error || verifyError?.message || 'Payment verification failed.');
+                        }
+
+                        const watermarkText = `${studentName} · ${studentEmail} · ${studentPhone}`;
+                        const stampedUrl = await stampWatermark(verifyData.signed_url, watermarkText);
+                        setSignedUrl(stampedUrl);
+                        setPdfInfo(prev => ({ ...prev, title: verifyData.pdf_title || prev?.title }));
+                        setStage('viewer');
+                        if (showToast) showToast('✅ Payment verified! Enjoy your guide.');
+                    } catch (e) {
+                        console.error('[PriorityOrderModal] verify', e);
+                        setErrorMsg(e.message || 'Payment succeeded but verification failed. Contact support.');
+                        setStage('error');
+                    } finally {
+                        setPaying(false);
+                    }
+                },
+                modal: {
+                    ondismiss: function () {
+                        setPaying(false);
+                        setStage('form');
+                    }
+                }
+            });
+
+            rzp.on('payment.failed', function () {
+                setPaying(false);
+                setErrorMsg('Payment failed or was cancelled. Please try again.');
+                setStage('error');
+            });
+
+            rzp.open();
         } catch (e) {
-            console.error('[PriorityOrderModal] handleSubmit', e);
-            setErrorMsg(e.message || 'Something went wrong submitting your payment. Please try again.');
+            console.error('[PriorityOrderModal] handlePay', e);
+            setErrorMsg(e.message || 'Something went wrong starting payment.');
             setStage('error');
-        } finally {
-            setUploading(false);
+            setPaying(false);
         }
     }
 
@@ -224,20 +257,10 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                     {stage === 'form' && (
                         <div>
                             <div className="text-center p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 mb-4">
-                                <div className="flex justify-center mb-2">
-                                    <img
-                                        src={pdfInfo?.price === 159 ? '/qr-pdf-159.png' : '/qr-pdf-49.png'}
-                                        alt="UPI QR"
-                                        width="220"
-                                        height="220"
-                                        className="w-56 h-56 rounded-lg object-contain"
-                                        onError={e => (e.target.style.display = 'none')}
-                                    />
-                                </div>
                                 <div className="text-sm font-bold my-0.5">
                                     Amount: ₹{pdfInfo?.price ?? 49}
                                 </div>
-                                <div className="text-gray-500 text-[11px]">Scan with any UPI app to pay</div>
+                                <div className="text-gray-500 text-[11px]">Secure payment via Razorpay</div>
                             </div>
 
                             <div className="mb-3">
@@ -265,58 +288,19 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                                 />
                             </div>
 
-                            <div className="mb-4">
-                                <label className="block mb-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                                    Upload Payment Screenshot <span className="text-red-500">*</span>
-                                </label>
-                                <label
-                                    htmlFor="pdfProofFile"
-                                    className={`w-full px-3 py-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 text-xs font-semibold cursor-pointer transition ${proofFileName
-                                        ? 'border-green-300 bg-green-50 text-green-700'
-                                        : 'border-gray-300 bg-white hover:border-indigo-400 text-gray-500'
-                                        }`}
-                                >
-                                    <span className="text-sm">📎</span>
-                                    <span>{proofFileName || 'Click to upload screenshot (JPG/PNG)'}</span>
-                                </label>
-                                <input
-                                    type="file"
-                                    id="pdfProofFile"
-                                    accept="image/*"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                            </div>
-
                             <button
-                                onClick={handleSubmit}
-                                disabled={uploading}
+                                onClick={handlePay}
+                                disabled={paying}
                                 className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition"
                             >
-                                {uploading ? 'Submitting…' : 'Submit Payment Proof'}
+                                {paying ? 'Please wait…' : `Pay ₹${pdfInfo?.price ?? 49} →`}
                             </button>
                         </div>
                     )}
 
-                    {stage === 'submitting' && (
+                    {stage === 'paying' && (
                         <div className="text-center py-16">
-                            <div className="text-sm text-gray-500">Submitting… please don't close this window.</div>
-                        </div>
-                    )}
-
-                    {stage === 'submitted' && (
-                        <div className="text-center py-10">
-                            <div className="text-4xl mb-3">✅</div>
-                            <p className="text-sm font-bold text-gray-900 mb-1">Payment proof submitted!</p>
-                            <p className="text-xs text-gray-500 mb-6">
-                                We'll verify your payment and send the guide to your WhatsApp shortly.
-                            </p>
-                            <button
-                                onClick={onClose}
-                                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition"
-                            >
-                                Close
-                            </button>
+                            <div className="text-sm text-gray-500">Opening payment window…</div>
                         </div>
                     )}
 
