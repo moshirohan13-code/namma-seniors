@@ -8,15 +8,17 @@ export default function Footer() {
         <div className="footer-top flex items-center justify-between flex-wrap gap-5 px-6 py-8 border-b border-white/10">
           {/* Logo */}
           <a href="#" className="flex items-center gap-3 no-underline">
-            <img
-              src="/logo.png"
-              alt="Namma Seniors"
-              className="w-11 h-11 rounded-xl object-contain"
-              onError={e => {
-                e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'flex';
-              }}
-            />
+            <div className="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-sm">
+              <img
+                src="/logo.png"
+                alt="Namma Seniors"
+                className="w-full h-full object-contain"
+                onError={e => {
+                  e.target.parentElement.style.display = 'none';
+                  e.target.parentElement.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            </div>
             <div
               className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-lg hidden"
             >
