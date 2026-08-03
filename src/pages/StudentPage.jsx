@@ -228,7 +228,7 @@ export default function StudentPage() {
         .from('mentors')
         .select('*')
         .eq('status', 'approved')
-        .order('created_at', { ascending: false });
+        .order('priority', { ascending: true, nullsFirst: false });
 
       if (error) {
         console.error('[Mentors error]', error);

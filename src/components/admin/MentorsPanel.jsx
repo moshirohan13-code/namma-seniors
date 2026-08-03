@@ -9,7 +9,29 @@ export default function MentorsPanel({ mentors, onRefresh, onViewMentor, showToa
     if (!s) return true;
     return [m.full_name, m.college, m.branch, m.phone].join(' ').toLowerCase().includes(s);
   });
+  async function moveMentor(id, direction) {
+    const idx = mentors.findIndex(m => String(m.id) === String(id));
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || swapIdx < 0 || swapIdx >= mentors.length) return;
 
+    const current = mentors[idx];
+    const swapWith = mentors[swapIdx];
+
+    const currentPriority = current.priority ?? idx;
+    const swapPriority = swapWith.priority ?? swapIdx;
+
+    try {
+      await Promise.all([
+        supabase.from('mentors').update({ priority: swapPriority }).eq('id', current.id),
+        supabase.from('mentors').update({ priority: currentPriority }).eq('id', swapWith.id)
+      ]);
+      showToast(`Moved ${current.full_name} ${direction}`);
+      onRefresh();
+    } catch (e) {
+      console.error('[Reorder]', e);
+      showToast('❌ Failed to reorder.');
+    }
+  }
   async function removeMentor(id) {
     const m = mentors.find(x => String(x.id) === String(id));
     if (!m || !window.confirm(`Remove ${m.full_name}?`)) return;
@@ -96,6 +118,22 @@ export default function MentorsPanel({ mentors, onRefresh, onViewMentor, showToa
                   </td>
                   <td className="px-3 py-2 text-xs">
                     <div className="flex gap-1 flex-wrap">
+                      <button
+                        onClick={() => moveMentor(m.id, 'up')}
+                        disabled={i === 0 || search.trim() !== ''}
+                        className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
+                        title="Move up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={() => moveMentor(m.id, 'down')}
+                        disabled={i === filtered.length - 1 || search.trim() !== ''}
+                        className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
+                        title="Move down"
+                      >
+                        ↓
+                      </button>
                       <button
                         onClick={() => onViewMentor(m)}
                         className="act-btn px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-black hover:bg-indigo-100 transition"

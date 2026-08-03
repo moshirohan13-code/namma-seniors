@@ -110,7 +110,20 @@ export default function AdminPage() {
   // ══════════════════════════════════════════════════════════
   // HELPER FUNCTIONS (defined after hooks, before final render)
   // ══════════════════════════════════════════════════════════
-
+  async function fetchMentors() {
+    try {
+      const { data, error } = await supabase
+        .from('mentors')
+        .select('*')
+        .eq('status', 'approved')
+        .order('priority', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      setMentors(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('[Mentors]', e);
+      setMentors([]);
+    }
+  }
   async function loadAll() {
     await Promise.allSettled([
       fetchBookings(),
@@ -119,6 +132,7 @@ export default function AdminPage() {
       fetchStudents(),
       fetchPdfPurchases()
     ]);
+
   }
 
   async function fetchBookings() {
@@ -136,20 +150,6 @@ export default function AdminPage() {
     }
   }
 
-  async function fetchMentors() {
-    try {
-      const { data, error } = await supabase
-        .from('mentors')
-        .select('*')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setMentors(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error('[Mentors]', e);
-      setMentors([]);
-    }
-  }
 
   async function fetchApplications() {
     try {
