@@ -196,11 +196,11 @@ export default function BookingsPanel({
                     </td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-900">{b.mentor_name || '—'}</td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-700 whitespace-nowrap">
-                      {studentPhone}
-                      {studentPhone !== '—' && (
+                      {mentorPhone}
+                      {mentorPhone !== '—' && (
                         <WhatsAppLink
-                          phone={studentPhone}
-                          prefillText={`Hi ${b.student_name || 'there'}, this is Namma Seniors! \u{1F393}\n\nWe've received your booking and shared your details with your mentor. We'll let you know the session time shortly. Thank you for your patience!`}
+                          phone={mentorPhone}
+                          prefillText={`Hi ${b.mentor_name || 'there'}! 🎉 You have a new booking from ${b.student_name || 'a student'}. Check your dashboard for details: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n– Namma Seniors Team`}
                         />
                       )}
                     </td>
@@ -209,7 +209,7 @@ export default function BookingsPanel({
                       {mentorPhone !== '—' && (
                         <WhatsAppLink
                           phone={mentorPhone}
-                          prefillText={`Hi, this is Namma Seniors! \u{1F393}\n\nYou have a new session booking from ${b.student_name || 'a student'}.\n\n${b.requirement_message || 'No details shared.'}\n\nCould you let us know your available time slots for this session? We'll pass it on to the student and share the Meet link.`}
+                          prefillText={`Hi ${b.mentor_name || 'there'}! 🎉 You have a new booking from ${b.student_name || 'a student'}.\n\n${b.requirement_message || 'No details shared.'}\n\nCheck your dashboard for full details and to schedule: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n– Namma Seniors Team`}
                         />
                       )}
                     </td>
