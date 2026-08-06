@@ -208,8 +208,8 @@ export default function BookingsPanel({
                       {mentorPhone}
                       {mentorPhone !== '—' && (
                         <WhatsAppLink
-                          phone={studentPhone}
-                          prefillText={`Hi ${b.student_name || 'there'} \u{1F44B}, this is Namma Seniors! \u{1F393}\u{2728}\n\nYour session with ${b.mentor_name || 'your mentor'} is confirmed \u{2705}\n\nWe'll share the exact time and Google Meet link here shortly \u{1F4C5}\n\nSee you soon! \u{1F31F}`}
+                          phone={mentorPhone}
+                          prefillText={`Hi ${b.mentor_name || 'there'}! \u{1F389} You have a new booking from ${b.student_name || 'a student'}. Check your dashboard for details: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n\u{2013} Namma Seniors Team`}
                         />
                       )}
                     </td>
