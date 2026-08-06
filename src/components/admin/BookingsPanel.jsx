@@ -196,11 +196,11 @@ export default function BookingsPanel({
                     </td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-900">{b.mentor_name || '—'}</td>
                     <td className="px-3 py-2 text-xs font-bold text-gray-700 whitespace-nowrap">
-                      {mentorPhone}
-                      {mentorPhone !== '—' && (
+                      {studentPhone}
+                      {studentPhone !== '—' && (
                         <WhatsAppLink
-                          phone={mentorPhone}
-                          prefillText={`Hi ${b.mentor_name || 'there'}! 🎉 You have a new booking from ${b.student_name || 'a student'}. Check your dashboard for details: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n– Namma Seniors Team`}
+                          phone={studentPhone}
+                          prefillText={`Hi ${b.student_name || 'there'}, this is Namma Seniors \u{1F393}\nYour session with ${b.mentor_name || 'your mentor'} is confirmed \u{2705}\nWe'll share the exact time and Google Meet link here shortly.\nSee you soon!`}
                         />
                       )}
                     </td>
@@ -208,8 +208,8 @@ export default function BookingsPanel({
                       {mentorPhone}
                       {mentorPhone !== '—' && (
                         <WhatsAppLink
-                          phone={mentorPhone}
-                          prefillText={`Hi ${b.mentor_name || 'there'}! 🎉 You have a new booking from ${b.student_name || 'a student'}.\n\n${b.requirement_message || 'No details shared.'}\n\nCheck your dashboard for full details and to schedule: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n– Namma Seniors Team`}
+                          phone={studentPhone}
+                          prefillText={`Hi ${b.student_name || 'there'} \u{1F44B}, this is Namma Seniors! \u{1F393}\u{2728}\n\nYour session with ${b.mentor_name || 'your mentor'} is confirmed \u{2705}\n\nWe'll share the exact time and Google Meet link here shortly \u{1F4C5}\n\nSee you soon! \u{1F31F}`}
                         />
                       )}
                     </td>
