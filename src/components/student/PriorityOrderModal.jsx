@@ -64,6 +64,16 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
 
     useEffect(() => {
         async function checkExistingAccess() {
+            // Check browser cache first — avoids re-downloading the PDF
+            // every time the student re-opens a guide they already viewed.
+            const cacheKey = `ns_pdf_cache_${pdfSlug}_${studentEmail}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                setSignedUrl(cached);
+                setStage('viewer');
+                return;
+            }
+
             try {
                 const { data, error } = await supabase.functions.invoke('check-pdf-access', {
                     body: { pdf_slug: pdfSlug, student_email: studentEmail }
@@ -72,6 +82,7 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                 if (!error && data?.purchased && data?.signed_url) {
                     const watermarkText = `${studentName} · ${studentEmail} · ${studentPhone}`;
                     const stampedUrl = await stampWatermark(data.signed_url, watermarkText);
+                    sessionStorage.setItem(cacheKey, stampedUrl);
                     setSignedUrl(stampedUrl);
                     setPdfInfo(prev => ({ ...prev, title: data.pdf_title || '' }));
                     setStage('viewer');

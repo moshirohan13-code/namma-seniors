@@ -42,12 +42,12 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative"
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto p-6 relative"
                 onClick={(e) => e.stopPropagation()}
             >
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl"
+                    className="sticky top-0 float-right -mt-2 -mr-2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-200 text-gray-400 hover:text-gray-700 hover:border-gray-300 flex items-center justify-center text-lg z-10"
                 >
                     ✕
                 </button>
@@ -80,64 +80,79 @@ export default function CounsellingModal({ onClose, onSelectPdf }) {
 
                 {!loading && !error && pdfs.length > 0 && (
                     <div className="flex flex-col gap-3">
-                        {pdfs.map((pdf) => {
-                            const isCutoffAnalysis =
-                                pdf.title.includes("Cutoff Analysis");
+                        {[...pdfs]
+                            .sort((a, b) => {
+                                const hasVideo = (p) =>
+                                    !p.title.includes("Cutoff Analysis") &&
+                                    !p.title.includes("Extra Fees") &&
+                                    !p.title.includes("BAMS") &&
+                                    !p.title.includes("BDS");
+                                const aVideo = hasVideo(a) ? 1 : 0;
+                                const bVideo = hasVideo(b) ? 1 : 0;
+                                if (aVideo !== bVideo) return aVideo - bVideo;
+                                return b.price - a.price;
+                            })
+                            .map((pdf) => {
+                                const isCutoffAnalysis =
+                                    pdf.title.includes("Cutoff Analysis");
 
-                            const isExtraFees =
-                                pdf.title.includes("Extra Fees");
+                                const isExtraFees =
+                                    pdf.title.includes("Extra Fees");
 
-                            const isGovtSemiGovtPriority =
-                                pdf.title.includes(
-                                    "Government and Semi-Government Priority Order"
-                                );
+                                const isBamsOrBds =
+                                    pdf.title.includes("BAMS") || pdf.title.includes("BDS");
 
-                            const showVideoButton =
-                                !isCutoffAnalysis && !isExtraFees;
+                                const isGovtSemiGovtPriority =
+                                    pdf.title.includes(
+                                        "Government and Semi-Government Priority Order"
+                                    );
 
-                            const videoUrl = isGovtSemiGovtPriority
-                                ? "https://youtu.be/iMvHWYZ05SY?si=r0zk12KPChkGpuJy"
-                                : "https://youtu.be/rpgYp1yEUec?si=lxGUcOFj3GDEVDRy";
+                                const showVideoButton =
+                                    !isCutoffAnalysis && !isExtraFees && !isBamsOrBds;
 
-                            return (
-                                <div
-                                    key={pdf.id}
-                                    className="flex items-center gap-2"
-                                >
-                                    <button
-                                        onClick={() => onSelectPdf(pdf.slug)}
-                                        className="flex-1 flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 hover:bg-indigo-100"
+                                const videoUrl = isGovtSemiGovtPriority
+                                    ? "https://youtu.be/iMvHWYZ05SY?si=r0zk12KPChkGpuJy"
+                                    : "https://youtu.be/rpgYp1yEUec?si=lxGUcOFj3GDEVDRy";
+
+                                return (
+                                    <div
+                                        key={pdf.id}
+                                        className="flex items-center gap-2"
                                     >
-                                        <span className="text-left">
-                                            🔒 {pdf.title}
-                                        </span>
-
-                                        <span className="flex-shrink-0 w-14 text-right">
-                                            ₹{pdf.price}
-                                        </span>
-                                    </button>
-
-                                    {showVideoButton && (
-                                        <a
-                                            href={videoUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex-shrink-0 self-center w-10 h-10 flex items-center justify-center rounded-full border hover:bg-gray-100"
-                                            title="Watch Preview"
+                                        <button
+                                            onClick={() => onSelectPdf(pdf.slug)}
+                                            className="flex-1 flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 hover:bg-indigo-100"
                                         >
-                                            <svg
-                                                viewBox="0 0 24 24"
-                                                className="w-5 h-5"
-                                                fill="#FF0000"
+                                            <span className="text-left">
+                                                🔒 {pdf.title}
+                                            </span>
+
+                                            <span className="flex-shrink-0 w-14 text-right">
+                                                ₹{pdf.price}
+                                            </span>
+                                        </button>
+
+                                        {showVideoButton && (
+                                            <a
+                                                href={videoUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex-shrink-0 self-center w-10 h-10 flex items-center justify-center rounded-full border hover:bg-gray-100"
+                                                title="Watch Preview"
                                             >
-                                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                                            </svg>
-                                        </a>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                                <svg
+                                                    viewBox="0 0 24 24"
+                                                    className="w-5 h-5"
+                                                    fill="#FF0000"
+                                                >
+                                                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                                                </svg>
+                                            </a>
+                                        )}
+                                    </div>
+                                );
+                            })}
                     </div>
                 )}
             </div>
