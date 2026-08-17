@@ -209,7 +209,7 @@ export default function BookingsPanel({
                       {mentorPhone !== '—' && (
                         <WhatsAppLink
                           phone={mentorPhone}
-                          prefillText={`Hi ${b.mentor_name || 'there'}! \u{1F389} You have a new booking from ${b.student_name || 'a student'}. Check your dashboard for details: https://nammaseniors.com/mentor-login\n\nAll the best, and thank you for your time!\n\u{2013} Namma Seniors Team`}
+                          prefillText={`Hi ${b.mentor_name || 'there'}! \u{1F389} New booking from ${b.student_name || 'a student'}.\nTheir question: "${b.requirement_message || 'Not specified'}"\nDashboard: https://nammaseniors.com/mentor-login\n\u{2013} Namma Seniors Team`}
                         />
                       )}
                     </td>
