@@ -240,7 +240,7 @@ export default function StudentPage() {
   async function loadMentors() {
     try {
       const { data, error } = await supabase
-        .from('mentors')
+        .from('mentors_public')
         .select('*')
         .eq('status', 'approved')
         .order('priority', { ascending: true, nullsFirst: false });
