@@ -8,7 +8,7 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
   const filtered = applications.filter(a => {
     const s = search.toLowerCase();
     if (!s) return true;
-    return [a.full_name, a.college, a.branch, a.phone].join(' ').toLowerCase().includes(s);
+    return [a.full_name, a.college, a.branch, a.phone, a.email].join(' ').toLowerCase().includes(s);
   });
 
   async function approveApp(id) {
@@ -18,6 +18,7 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
     try {
       const mentor = {
         full_name: app.full_name,
+        email: (app.email || '').toLowerCase(),
         college: app.college,
         degree: app.degree || '',
         year: app.year || '',
@@ -31,7 +32,8 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
         id_card_url: app.id_card_url || '',
         youtube_link: app.youtube_link || '',
         instagram_link: app.instagram_link || '',
-        payout_per_session: CONFIG.MENTOR_PAYOUT, // Must be 65 to match SQL
+        category: 'entrance',
+        payout_per_session: CONFIG.MENTOR_PAYOUT,
         status: 'approved',
         featured: false,
         homepage_highlight: '',
@@ -54,12 +56,12 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
       if (app.phone) {
         const cleanPhone = String(app.phone).replace(/\D/g, '');
         const waNum = cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone;
-        const msg = `Hi ${app.full_name || 'there'}, welcome to Namma Seniors! Thank you so much for joining as a senior mentor. We're excited to have you on board and will start sending you session requests soon.`;
+        const msg = `Hi ${app.full_name || 'there'}, welcome to Namma Seniors! Thank you so much for joining as a senior mentor. We're excited to have you on board and will start sending you session requests soon. Track your bookings here: https://nammaseniors.com/mentor-login`;
         window.open(`https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`, '_blank');
       }
     } catch (e) {
       console.error('[Approve]', e);
-      showToast('❌ Approval failed.');
+      showToast('❌ Approval failed: ' + (e.message || 'unknown error'));
     }
   }
 
@@ -84,7 +86,7 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
         <div>
           <h3 className="text-[15px] font-black text-gray-900">⏳ Pending Approvals</h3>
           <p className="text-[11.5px] text-gray-500 mt-0.5">
-            Review mentor applications — new ones appear in real-time
+            Review entrance senior applications — new ones appear in real-time
           </p>
         </div>
         <div className="tbl-actions flex gap-2 items-center flex-wrap">
@@ -127,7 +129,10 @@ export default function ApprovalsPanel({ applications, onRefresh, onViewApp, sho
               filtered.map((a, i) => (
                 <tr key={a.id} className="hover:bg-indigo-50/30 border-b border-gray-100 transition">
                   <td className="px-3 py-2 text-xs text-gray-700">{i + 1}</td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-900">{a.full_name}</td>
+                  <td className="px-3 py-2 text-xs">
+                    <div className="font-bold text-gray-900">{a.full_name}</div>
+                    <div className="text-[10px] text-gray-400">{a.email || ''}</div>
+                  </td>
                   <td className="px-3 py-2 text-[11px] text-gray-600 max-w-[110px] truncate">{a.college || '—'}</td>
                   <td className="px-3 py-2 text-xs">
                     <div className="font-bold text-gray-900">{a.degree || ''}</div>

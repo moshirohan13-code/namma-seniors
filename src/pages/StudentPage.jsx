@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase, sbFetch, sbUpload } from '../lib/supabase';
-import { CONFIG } from '../lib/config';
+import { CONFIG, getMentorPricing } from '../lib/config';
 import {
   pickPalette,
   getInitials,
@@ -51,6 +51,9 @@ export default function StudentPage() {
   const [currentMentor, setCurrentMentor] = useState(null);
   const [paymentProofUrl, setPaymentProofUrl] = useState('');
 
+  // ── CATEGORY (NEW): 'entrance' = KCET/NEET/JEE, 'placement' = placed seniors ──
+  const [category, setCategory] = useState('entrance');
+
   // ── FILTERS (CRITICAL - MUST EXIST) ──
   const [searchQuery, setSearchQuery] = useState('');
   const [examFilter, setExamFilter] = useState('All');
@@ -92,7 +95,19 @@ export default function StudentPage() {
     if (saved?.email && saved?.phone) {
       setStudentSession(saved);
       setIsLoggedIn(true);
+      return;
     }
+
+    // No local student session yet — check if we just came back from
+    // a Google OAuth redirect (Supabase session exists but phone number
+    // hasn't been collected yet). If so, reopen the login modal so
+    // LoginGate's own logic can pick up where it left off.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email) {
+        setLoginGateMandatory(true);
+        setShowLoginGate(true);
+      }
+    });
   }, []);
 
   // ── LOAD MENTORS ON MOUNT ──
@@ -110,10 +125,10 @@ export default function StudentPage() {
     return () => teardownRealtime();
   }, [isLoggedIn]);
 
-  // ── APPLY FILTERS WHEN INPUTS CHANGE ──
+  // ── APPLY FILTERS WHEN INPUTS CHANGE (category added) ──
   useEffect(() => {
     applyFiltersAndRender();
-  }, [searchQuery, examFilter, rankFilter, allMentors]);
+  }, [searchQuery, examFilter, rankFilter, category, allMentors]);
 
   // ══════════════════════════════════════════════════════════
   // SESSION MANAGEMENT
@@ -250,25 +265,34 @@ export default function StudentPage() {
     const rankRng = rankFilter;
 
     const filtered = allMentors.filter(m => {
-      const blob = `${m.full_name || ''} ${m.college || ''} ${m.branch || ''}`.toLowerCase();
+      // ── CATEGORY (NEW) ──
+      // Anything not marked 'placement' counts as 'entrance' (covers old rows with no category)
+      const isPlacementMentor = m.category === 'placement';
+      if (category === 'placement' && !isPlacementMentor) return false;
+      if (category === 'entrance' && isPlacementMentor) return false;
+
+      const blob = `${m.full_name || ''} ${m.college || ''} ${m.branch || ''} ${m.company || ''}`.toLowerCase();
       const prof = (m.exam_profile || '').toLowerCase();
 
       if (search && !blob.includes(search)) return false;
 
-      if (examCat !== 'All') {
-        const map = { JEE: 'jee', NEET: 'neet', KCET: 'kcet', COMEDK: 'comedk' };
-        if (!prof.includes(map[examCat] || '')) return false;
-      }
+      // Exam + rank filters only apply to the entrance category
+      if (category === 'entrance') {
+        if (examCat !== 'All') {
+          const map = { JEE: 'jee', NEET: 'neet', KCET: 'kcet', COMEDK: 'comedk' };
+          if (!prof.includes(map[examCat] || '')) return false;
+        }
 
-      if (rankRng) {
-        const [lo, hi] = rankRng.split('-').map(Number);
-        const rank =
-          parseInt(m.kcet_rank || 0) ||
-          parseInt(m.jee_rank || 0) ||
-          parseInt(m.neet_rank || 0) ||
-          parseInt(m.comedk_rank || 0) ||
-          999999;
-        if (rank < lo || rank > hi) return false;
+        if (rankRng) {
+          const [lo, hi] = rankRng.split('-').map(Number);
+          const rank =
+            parseInt(m.kcet_rank || 0) ||
+            parseInt(m.jee_rank || 0) ||
+            parseInt(m.neet_rank || 0) ||
+            parseInt(m.comedk_rank || 0) ||
+            999999;
+          if (rank < lo || rank > hi) return false;
+        }
       }
 
       return true;
@@ -276,6 +300,25 @@ export default function StudentPage() {
 
     setFilteredMentors(filtered);
     setShowAllMentors(false);
+  }
+
+  // Called by the two buttons in the Hero
+  function handleCategoryChange(next) {
+    if (next === category) return;
+    setCategory(next);
+    setExamFilter('All');
+    setRankFilter('');
+    setSearchQuery('');
+    setShowFilterDrawer(false);
+  }
+
+  // Register as Senior -> opens WhatsApp with a short message
+  function openMentorWhatsApp() {
+    const msg = 'Hello Namma Seniors, I would like to become a mentor and guide juniors. Could you please tell me how to get started?';
+    window.open(
+      `https://wa.me/${CONFIG.WHATSAPP_SUPPORT}?text=${encodeURIComponent(msg)}`,
+      '_blank'
+    );
   }
 
   // ══════════════════════════════════════════════════════════
@@ -367,10 +410,12 @@ export default function StudentPage() {
 
       {/* Hero */}
       <Hero
+        category={category}
+        onCategoryChange={handleCategoryChange}
         onRegisterClick={() => {
           requireLogin(() => {
             setShowOnboarding(true);
-          }, '⚠️ Please log in to register as a mentor.');
+          }, '⚠️ Please log in to register as a senior.');
         }}
         onCounsellingClick={() => setShowCounselling(true)}
       />
@@ -379,6 +424,7 @@ export default function StudentPage() {
 
       {/* Filter Bar */}
       <FilterBar
+        category={category}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         examFilter={examFilter}
@@ -398,6 +444,7 @@ export default function StudentPage() {
 
       {/* Mentor Grid */}
       <MentorGrid
+        category={category}
         mentors={filteredMentors}
         showAll={showAllMentors}
         onViewAll={() => setShowAllMentors(true)}
@@ -518,7 +565,7 @@ export default function StudentPage() {
               onClick={() => {
                 requireLogin(() => {
                   setShowOnboarding(true);
-                }, '⚠️ Please log in to register as a mentor.');
+                }, '⚠️ Please log in to register as a senior.');
               }}
             >
               Register as Mentor →
@@ -548,6 +595,7 @@ export default function StudentPage() {
       {showProfileModal && currentMentor && (
         <ProfileModal
           mentor={currentMentor}
+          viewerEmail={studentSession?.email || null}
           onClose={() => setShowProfileModal(false)}
           onBookSession={() => {
             setShowProfileModal(false);
@@ -573,6 +621,7 @@ export default function StudentPage() {
             const studentEmail = studentSession.email || '—';
 
             const qna = chatAnswers || {};
+            const pricing = getMentorPricing(currentMentor);
             const requirementSummary = [
               qna.topic ? `Focus area: ${qna.topic}` : null,
               qna.help ? `Looking for: ${qna.help}` : null,
@@ -595,9 +644,9 @@ export default function StudentPage() {
                   razorpay_payment_id: paymentInfo?.razorpay_payment_id || null,
                   requirement_message: requirementSummary,
                   requirement_qna: qna,
-                  session_fee: CONFIG.SESSION_FEE,
-                  mentor_payout: CONFIG.MENTOR_PAYOUT,
-                  platform_fee: CONFIG.PLATFORM_FEE,
+                  session_fee: pricing.fee,
+                  mentor_payout: pricing.payout,
+                  platform_fee: pricing.platform,
                   status: 'pending',
                   created_at: new Date().toISOString()
                 }

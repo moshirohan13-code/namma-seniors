@@ -1,35 +1,46 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 export default function MentorLogin() {
-    const [email, setEmail] = useState('');
-    const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    useEffect(() => {
+        checkSession();
 
-        const cleanEmail = email.trim().toLowerCase();
-        const cleanPhone = phone.trim().replace(/\D/g, '');
+        const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+            if (event === 'SIGNED_IN') checkSession();
+        });
+        return () => listener.subscription.unsubscribe();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
+    async function checkSession() {
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user?.email) {
+                setLoading(false);
+                return;
+            }
+
+            const email = session.user.email.trim().toLowerCase();
+
             const { data, error: dbError } = await supabase
                 .from('mentors')
                 .select('*')
-                .ilike('email', cleanEmail)
-                .eq('phone', cleanPhone)
+                .ilike('email', email)
                 .eq('status', 'approved')
                 .maybeSingle();
 
             if (dbError) throw dbError;
 
             if (!data) {
-                setError('No matching approved mentor found. Check your email and phone number.');
+                setError(
+                    `No approved senior found for ${email}. Please sign in with the same Google email you used to register.`
+                );
+                await supabase.auth.signOut();
                 setLoading(false);
                 return;
             }
@@ -43,46 +54,38 @@ export default function MentorLogin() {
         }
     }
 
+    async function handleGoogle() {
+        setError('');
+        setLoading(true);
+        const { error: oauthError } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: `${window.location.origin}/mentor-login` }
+        });
+        if (oauthError) {
+            console.error('[MentorLogin Google]', oauthError);
+            setError('Google sign-in failed. Please try again.');
+            setLoading(false);
+        }
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
             <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
-                <h1 className="text-xl font-black text-gray-900 mb-1">Mentor Login</h1>
-                <p className="text-sm text-gray-500 mb-6">Enter your registered email and phone number.</p>
+                <h1 className="text-xl font-black text-gray-900 mb-1">Senior Login</h1>
+                <p className="text-sm text-gray-500 mb-6">
+                    Sign in with the same Google email you used to register.
+                </p>
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Email</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            required
-                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-                            placeholder="you@example.com"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-600 mb-1">Phone Number</label>
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={e => setPhone(e.target.value)}
-                            required
-                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100"
-                            placeholder="9876543210"
-                        />
-                    </div>
+                {error && <p className="text-xs text-red-600 font-semibold mb-4">{error}</p>}
 
-                    {error && <p className="text-xs text-red-600 font-semibold">{error}</p>}
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition disabled:opacity-50"
-                    >
-                        {loading ? 'Checking…' : 'Log In'}
-                    </button>
-                </form>
+                <button
+                    type="button"
+                    onClick={handleGoogle}
+                    disabled={loading}
+                    className="w-full py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+                >
+                    {loading ? 'Please wait…' : 'Continue with Google'}
+                </button>
             </div>
         </div>
     );

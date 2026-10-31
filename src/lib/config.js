@@ -20,13 +20,35 @@ export const CONFIG = {
   WHATSAPP_SUPPORT: import.meta.env.VITE_WHATSAPP_SUPPORT,
 
   // App Settings (MUST MATCH YOUR SQL DEFAULTS)
+  // Entrance-exam seniors
   SESSION_FEE: 99,
   MENTOR_PAYOUT: 75,
   PLATFORM_FEE: 24,
+
+  // Placed seniors (NEW)
+  PLACEMENT_SESSION_FEE: 199,
+  PLACEMENT_MENTOR_PAYOUT: 159,
+
   INITIAL_MENTOR_COUNT: 6,
   SESSION_KEY: 'ns_student_v4',
   FREE_REQUEST_MENTOR: 'Free Session Request'
 };
+
+/**
+ * Price for ONE mentor.
+ * 1) If the mentor row has session_fee / mentor_payout set in Supabase, use those.
+ * 2) Otherwise placed seniors get 199 / 159 and everyone else gets 99 / 75.
+ */
+export function getMentorPricing(mentor) {
+  const isPlacement = mentor?.category === 'placement';
+  const defaultFee = isPlacement ? CONFIG.PLACEMENT_SESSION_FEE : CONFIG.SESSION_FEE;
+  const defaultPayout = isPlacement ? CONFIG.PLACEMENT_MENTOR_PAYOUT : CONFIG.MENTOR_PAYOUT;
+
+  const fee = Number(mentor?.session_fee) || defaultFee;
+  const payout = Number(mentor?.mentor_payout) || defaultPayout;
+
+  return { fee, payout, platform: fee - payout };
+}
 
 // Validate required env vars on app load
 const required = [

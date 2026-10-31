@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { fmtDate, fmtDateTime } from '../../utils/helpers';
 import { CONFIG } from '../../lib/config';
+import { supabase } from '../../lib/supabase';
 
 export default function DetailModal({ data, type, mentors, onClose }) {
   if (!data) return null;
@@ -43,8 +45,18 @@ function getTitle(data, type) {
 
 function getSubtitle(data, type) {
   if (type === 'booking') return `${data.mentor_name || 'Mentor'} • ${data.status || 'pending'}`;
-  if (type === 'mentor') return 'Approved Mentor';
-  return 'Pending Application';
+  const who = data.category === 'placement' ? 'Placed Senior' : 'Entrance Senior';
+  if (type === 'mentor') return `Approved ${who}`;
+  return `Pending Application • ${who}`;
+}
+
+function experienceText(x) {
+  if (x.experience_level === 'fresher') return 'Fresher';
+  if (x.experience_level === 'experienced') {
+    const y = Number(x.years_experience);
+    return y ? `${y} ${y === 1 ? 'yr' : 'yrs'} experience` : 'Experienced';
+  }
+  return x.experience_level ? 'Newly Joined' : '';
 }
 
 function BookingDetails({ data, mentors }) {
@@ -92,6 +104,7 @@ function BookingDetails({ data, mentors }) {
 }
 
 function PersonDetails({ data, type }) {
+  const isPlaced = data.category === 'placement';
   const canHelpWith = data.can_help_with || '';
   const experienceSection = canHelpWith ? (
     <div className="mt-4">
@@ -137,20 +150,43 @@ function PersonDetails({ data, type }) {
       <div className="detail-grid grid grid-cols-2 gap-2">
         <DetailSlot label="Name" value={data.full_name} />
         <DetailSlot label="Phone" value={data.phone} />
+        <DetailSlot label="Email" value={data.email} fullWidth />
+        <DetailSlot label="Type" value={isPlaced ? 'Placed Senior' : 'Entrance Senior'} />
+        <DetailSlot label="Status" value={data.status} />
+
+        {isPlaced && (
+          <>
+            <DetailSlot label="Company" value={data.company} />
+            <DetailSlot label="Role" value={data.role} />
+            <DetailSlot label="Experience" value={experienceText(data)} />
+            {type === 'mentor' && (
+              <>
+                <DetailSlot label="Student Pays" value={`₹${data.session_fee || CONFIG.PLACEMENT_SESSION_FEE}`} />
+                <DetailSlot label="Senior Earns" value={`₹${data.mentor_payout || CONFIG.PLACEMENT_MENTOR_PAYOUT}`} />
+              </>
+            )}
+          </>
+        )}
+
         <DetailSlot label="College" value={data.college} />
         <DetailSlot label="Degree" value={data.degree} />
         <DetailSlot label="Branch" value={data.branch} />
         <DetailSlot label="Year" value={data.year} />
-        <DetailSlot label="Exam Profile" value={data.exam_profile} />
+
+        {!isPlaced && (
+          <>
+            <DetailSlot label="Exam Profile" value={data.exam_profile} />
+            <DetailSlot label="KCET Rank" value={data.kcet_rank} />
+            <DetailSlot label="COMEDK Rank" value={data.comedk_rank} />
+            <DetailSlot label="JEE Rank" value={data.jee_rank} />
+            <DetailSlot label="JEE Adv Rank" value={data.jee_adv_rank} />
+            <DetailSlot label="NEET Rank" value={data.neet_rank} />
+            <DetailSlot label="NEET Marks" value={data.neet_marks} />
+          </>
+        )}
+
         <DetailSlot label="Languages" value={data.languages} />
         <DetailSlot label="Home Location" value={data.home_location} />
-        <DetailSlot label="Status" value={data.status} />
-        <DetailSlot label="KCET Rank" value={data.kcet_rank} />
-        <DetailSlot label="COMEDK Rank" value={data.comedk_rank} />
-        <DetailSlot label="JEE Rank" value={data.jee_rank} />
-        <DetailSlot label="JEE Adv Rank" value={data.jee_adv_rank} />
-        <DetailSlot label="NEET Rank" value={data.neet_rank} />
-        <DetailSlot label="NEET Marks" value={data.neet_marks} />
         <DetailSlot label="Created" value={fmtDate(data.created_at)} />
       </div>
 
@@ -163,19 +199,64 @@ function PersonDetails({ data, type }) {
         </div>
       )}
 
-      {data.id_card_url && (
-        <div className="mt-3">
-          <a
-            href={data.id_card_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-indigo-600 font-bold text-xs bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200 no-underline hover:bg-indigo-100 transition"
-          >
-            📎 Open ID Card
-          </a>
-        </div>
-      )}
+      {data.id_card_url && <IdCardLink url={data.id_card_url} />}
     </>
+  );
+}
+
+function IdCardLink({ url }) {
+  const [signedUrl, setSignedUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function getSignedUrl() {
+      setLoading(true);
+      try {
+        // Extract the file path after "mentor-ids/" from the stored URL
+        const parts = url.split('mentor-ids/');
+        const filePath = parts[1]?.split('?')[0];
+
+        if (!filePath) {
+          setSignedUrl(null);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .storage
+          .from('mentor-ids')
+          .createSignedUrl(filePath, 300); // link valid for 5 minutes
+
+        if (error) throw error;
+        setSignedUrl(data.signedUrl);
+      } catch (e) {
+        console.error('[IdCardLink]', e);
+        setSignedUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    getSignedUrl();
+  }, [url]);
+
+  if (loading) {
+    return <div className="mt-3 text-xs text-gray-400">Loading ID card link…</div>;
+  }
+
+  if (!signedUrl) {
+    return <div className="mt-3 text-xs text-red-500">⚠️ Could not load ID card.</div>;
+  }
+
+  return (
+    <div className="mt-3">
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 text-indigo-600 font-bold text-xs bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200 no-underline hover:bg-indigo-100 transition"
+      >
+        📎 Open ID Card
+      </a>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CONFIG } from '../../lib/config';
+import { getMentorPricing } from '../../lib/config';
 import { fmtDate, fmtTime } from '../../utils/helpers';
 
 export default function CheckoutModal({
@@ -11,6 +11,9 @@ export default function CheckoutModal({
   onClose,
   showToast
 }) {
+  // Price for THIS mentor (199 / 159 for placed seniors, 99 / 75 for others)
+  const pricing = getMentorPricing(mentor);
+
   const [paying, setPaying] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [chatStarted, setChatStarted] = useState(false);
@@ -100,7 +103,7 @@ export default function CheckoutModal({
 
     try {
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-booking-order', {
-        body: { mentor_id: mentor.id, amount: CONFIG.SESSION_FEE }
+        body: { mentor_id: mentor.id, amount: pricing.fee }
       });
 
       if (orderError || !orderData?.order_id) {
@@ -200,7 +203,7 @@ export default function CheckoutModal({
           {step === 'payment' && !chatStarted && (
             <div id="checkoutPaymentSection">
               <div className="text-center p-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 mb-4">
-                <div className="text-sm font-bold my-0.5">Amount: ₹{CONFIG.SESSION_FEE}.00</div>
+                <div className="text-sm font-bold my-0.5">Amount: ₹{pricing.fee}.00</div>
                 <div className="text-gray-500 text-[11px]">Secure payment via Razorpay</div>
               </div>
 
@@ -214,20 +217,20 @@ export default function CheckoutModal({
                     <div className="b-icon w-6 h-6 rounded-lg bg-green-50 flex items-center justify-center text-xs">🎓</div>
                     <span>To Senior Mentor</span>
                   </div>
-                  <span className="amt-green text-green-700 font-bold">₹{CONFIG.MENTOR_PAYOUT}</span>
+                  <span className="amt-green text-green-700 font-bold">₹{pricing.payout}</span>
                 </div>
                 <div className="breakdown-item flex items-center justify-between py-2 text-xs">
                   <div className="breakdown-left flex items-center gap-2 text-gray-700">
                     <div className="b-icon w-6 h-6 rounded-lg bg-purple-50 flex items-center justify-center text-xs">⚙️</div>
                     <span>Platform Fees & Operations</span>
                   </div>
-                  <span className="amt-purple text-purple-700 font-bold">₹{CONFIG.PLATFORM_FEE}</span>
+                  <span className="amt-purple text-purple-700 font-bold">₹{pricing.platform}</span>
                 </div>
               </div>
 
               <div className="donation-note flex gap-2 p-3 rounded-xl bg-green-50 border border-green-200 text-green-800 mb-3">
                 <p className="text-[11px] leading-relaxed">
-                  <strong>Platform Fees & Operations: ₹{CONFIG.PLATFORM_FEE}</strong> (Includes a ₹2 donation to support
+                  <strong>Platform Fees & Operations: ₹{pricing.platform}</strong> (Includes a ₹2 donation to support
                   underprivileged students).
                 </p>
               </div>
@@ -237,7 +240,7 @@ export default function CheckoutModal({
                 disabled={paying}
                 className="w-full mt-1 py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition"
               >
-                {paying ? 'Please wait…' : `Pay ₹${CONFIG.SESSION_FEE} →`}
+                {paying ? 'Please wait…' : `Pay ₹${pricing.fee} →`}
               </button>
             </div>
           )}
@@ -365,7 +368,7 @@ export default function CheckoutModal({
                     <div className="success-detail-label text-[8px] font-extrabold uppercase tracking-wide text-gray-400 mb-0.5">
                       Amount Paid
                     </div>
-                    <div className="success-detail-value text-xs font-semibold text-gray-900">₹{CONFIG.SESSION_FEE}</div>
+                    <div className="success-detail-value text-xs font-semibold text-gray-900">₹{pricing.fee}</div>
                   </div>
                   <div className="success-detail-slot bg-gray-50 border border-gray-200 rounded-lg p-2">
                     <div className="success-detail-label text-[8px] font-extrabold uppercase tracking-wide text-gray-400 mb-0.5">

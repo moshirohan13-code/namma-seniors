@@ -4,6 +4,7 @@ export default function AdminTabs({ activeTab, onTabChange, counts }) {
     { id: 'free', label: 'Free Session Requests', icon: '💡', badge: counts.free },
     { id: 'mentors', label: 'Mentors', icon: '👤', badge: counts.mentors },
     { id: 'approvals', label: 'Approvals', icon: '⏳', badge: counts.approvals, red: true },
+    { id: 'placement', label: 'Placement', icon: '💼', badge: counts.placement, red: true },
     { id: 'students', label: 'Students', icon: '🎓', badge: counts.students },
     { id: 'pdfs', label: 'PDF Purchases', icon: '📄', badge: counts.pdfs }
   ];

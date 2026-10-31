@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { pickPalette, getInitials, esc, examTagClass, parseExams } from '../../utils/helpers';
-import { CONFIG } from '../../lib/config';
+import { getMentorPricing } from '../../lib/config';
 
-export default function ProfileModal({ mentor, onClose, onBookSession }) {
+export default function ProfileModal({ mentor, viewerEmail, onClose, onBookSession }) {
   const [colorA, colorB] = pickPalette(mentor.full_name);
-  const exams = parseExams(mentor.exam_profile);
+  const isPlacement = mentor.category === 'placement';
+  const exams = isPlacement ? [] : parseExams(mentor.exam_profile);
+  const pricing = getMentorPricing(mentor);
 
   const degreeStr = [mentor.degree, mentor.branch].filter(Boolean).join(' – ') || '—';
   const langs = String(mentor.languages || '')
@@ -18,6 +22,24 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
 
   const safeYoutube = isSafeSocialUrl(mentor.youtube_link, ['youtube.com', 'www.youtube.com', 'youtu.be']);
   const safeInstagram = isSafeSocialUrl(mentor.instagram_link, ['instagram.com', 'www.instagram.com']);
+
+  // ── Record that this profile was viewed (once per visitor per session) ──
+  useEffect(() => {
+    if (!mentor?.id) return;
+    const key = `ns_pv_${mentor.id}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+    } catch (_) { /* ignore */ }
+
+    supabase
+      .from('profile_views')
+      .insert({ mentor_id: String(mentor.id), viewer_email: viewerEmail || null })
+      .then(({ error }) => {
+        if (error) console.warn('[profile view]', error.message);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mentor?.id]);
 
   return (
     <div className="m-overlay fixed inset-0 z-[800] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md" onClick={onClose}>
@@ -52,6 +74,16 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
           )}
 
           <div className="profile-exam-tags flex flex-wrap justify-center gap-1">
+            {isPlacement && (
+              <span className="profile-etag px-2 py-1 rounded-full text-[10px] font-bold bg-white/20 border border-white/30">
+                Placed
+              </span>
+            )}
+            {isPlacement && mentor.experience_level && (
+              <span className="profile-etag px-2 py-1 rounded-full text-[10px] font-bold bg-white/20 border border-white/30">
+                {experienceLabel(mentor)}
+              </span>
+            )}
             {exams.map((exam, i) => (
               <span
                 key={i}
@@ -74,6 +106,8 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
               </div>
               <div className="detail-grid-new flex flex-col gap-3">
                 {mentor.college && <DetailItem icon="🏛️" label="College" value={mentor.college} />}
+                {isPlacement && mentor.company && <DetailItem icon="💼" label="Company" value={mentor.company} />}
+                {isPlacement && mentor.role && <DetailItem icon="👨‍💻" label="Role" value={mentor.role} />}
                 {mentor.year && <DetailItem icon="📅" label="Academic Year" value={mentor.year} />}
                 {mentor.home_location && <DetailItem icon="📍" label="Home Location" value={mentor.home_location} />}
               </div>
@@ -107,21 +141,22 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
             </div>
           </div>
 
-          {/* Ranks */}
-          {(mentor.kcet_rank || mentor.comedk_rank || mentor.jee_rank || mentor.jee_adv_rank || mentor.neet_rank) && (
-            <div className="profile-card-group mb-5">
-              <div className="pm-section-title-new text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-3">
-                Entrance Ranks
+          {/* Ranks (entrance seniors only) */}
+          {!isPlacement &&
+            (mentor.kcet_rank || mentor.comedk_rank || mentor.jee_rank || mentor.jee_adv_rank || mentor.neet_rank) && (
+              <div className="profile-card-group mb-5">
+                <div className="pm-section-title-new text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-3">
+                  Entrance Ranks
+                </div>
+                <div className="rank-grid-new grid grid-cols-2 gap-2">
+                  {mentor.kcet_rank && <RankSlot label="KCET" rank={mentor.kcet_rank} />}
+                  {mentor.comedk_rank && <RankSlot label="COMEDK" rank={mentor.comedk_rank} />}
+                  {mentor.jee_rank && <RankSlot label="JEE Main" rank={mentor.jee_rank} />}
+                  {mentor.jee_adv_rank && <RankSlot label="JEE Adv" rank={mentor.jee_adv_rank} />}
+                  {mentor.neet_rank && <RankSlot label="NEET" rank={mentor.neet_rank} />}
+                </div>
               </div>
-              <div className="rank-grid-new grid grid-cols-2 gap-2">
-                {mentor.kcet_rank && <RankSlot label="KCET" rank={mentor.kcet_rank} />}
-                {mentor.comedk_rank && <RankSlot label="COMEDK" rank={mentor.comedk_rank} />}
-                {mentor.jee_rank && <RankSlot label="JEE Main" rank={mentor.jee_rank} />}
-                {mentor.jee_adv_rank && <RankSlot label="JEE Adv" rank={mentor.jee_adv_rank} />}
-                {mentor.neet_rank && <RankSlot label="NEET" rank={mentor.neet_rank} />}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Languages & Expertise */}
           {(langs.length > 0 || helps.length > 0) && (
@@ -159,7 +194,7 @@ export default function ProfileModal({ mentor, onClose, onBookSession }) {
           {/* Action */}
           <div className="profile-action-container flex flex-col gap-3 mt-7">
             <div className="fee-badge-new text-center text-sm text-gray-500">
-              Session Fee: <strong className="text-indigo-600 text-lg">₹{CONFIG.SESSION_FEE}</strong>
+              Session Fee: <strong className="text-indigo-600 text-lg">₹{pricing.fee}</strong>
             </div>
             <button
               onClick={onBookSession}
@@ -208,4 +243,13 @@ function RankSlot({ label, rank }) {
       <span className="r-value block text-sm font-extrabold text-gray-800">Rank #{rank}</span>
     </div>
   );
+}
+
+function experienceLabel(mentor) {
+  if (mentor.experience_level === 'fresher') return 'Fresher';
+  if (mentor.experience_level === 'experienced') {
+    const y = Number(mentor.years_experience);
+    return y ? `${y} ${y === 1 ? 'yr' : 'yrs'} Experience` : 'Experienced';
+  }
+  return 'Newly Joined'; // older rows
 }

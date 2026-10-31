@@ -1,11 +1,32 @@
 import { CONFIG } from '../../lib/config';
-export default function Hero({ onRegisterClick, onCounsellingClick }) {
+
+export default function Hero({
+  onRegisterClick,
+  onCounsellingClick,
+  category,
+  onCategoryChange
+}) {
+  const isPlacement = category === 'placement';
+
+  function handlePlacementClick() {
+    if (!onCategoryChange) return;
+    // Tap once to show placed seniors, tap again to go back to normal mentors
+    onCategoryChange(isPlacement ? 'entrance' : 'placement');
+    // Scroll down to the search bar / mentor list
+    setTimeout(() => {
+      document.querySelector('.controls-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }
+
   return (
-    <section className="hero relative text-white text-center py-20 px-5 overflow-hidden" style={{
-      background: 'radial-gradient(ellipse at top left, #818cf8 0%, #6366f1 30%, #7c3aed 70%, #a855f7 100%)',
-      backgroundSize: '150% 150%',
-      backgroundPosition: 'top left'
-    }}>
+    <section
+      className="hero relative text-white text-center py-20 px-5 overflow-hidden"
+      style={{
+        background: 'radial-gradient(ellipse at top left, #818cf8 0%, #6366f1 30%, #7c3aed 70%, #a855f7 100%)',
+        backgroundSize: '150% 150%',
+        backgroundPosition: 'top left'
+      }}
+    >
       <div
         className="absolute w-[400px] h-[400px] -top-24 -left-20 rounded-full"
         style={{
@@ -35,22 +56,39 @@ export default function Hero({ onRegisterClick, onCounsellingClick }) {
           Seniors who have cracked top companies.
         </p>
 
-        <div className="flex flex-row justify-center items-stretch gap-3 flex-wrap max-w-md mx-auto">
+        {/* Three buttons: Counselling, Register as Senior, Placement */}
+        <div className="flex flex-row justify-center items-stretch gap-3 flex-wrap max-w-2xl mx-auto">
           <button
             onClick={onCounsellingClick}
-            className="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
+            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
           >
             <span className="flex-shrink-0">📚</span>
             <span className="whitespace-nowrap">Counselling</span>
           </button>
           <button
             onClick={onRegisterClick}
-            className="flex-1 min-w-0 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
+            className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition"
           >
             <span className="flex-shrink-0">🎓</span>
             <span className="whitespace-nowrap">Register as Senior</span>
           </button>
+          <button
+            onClick={handlePlacementClick}
+            className={`flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-bold border-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition ${isPlacement
+              ? 'bg-white text-indigo-700 border-white'
+              : 'bg-sky-100 hover:bg-sky-200 text-sky-800 border-sky-200'
+              }`}
+          >
+            <span className="flex-shrink-0">💼</span>
+            <span className="whitespace-nowrap">Placement</span>
+          </button>
         </div>
+
+        {isPlacement && (
+          <p className="text-white/80 text-xs font-semibold mt-4">
+            Showing placed seniors. Tap Placement again to go back to all mentors.
+          </p>
+        )}
       </div>
     </section>
   );

@@ -16,10 +16,11 @@ function useInitialMentorCount() {
   return count;
 }
 
-export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession }) {
+export default function MentorGrid({ category = 'entrance', mentors, showAll, onViewAll, onBookSession }) {
   const initialCount = useInitialMentorCount();
   const visibleMentors = showAll ? mentors : mentors.slice(0, initialCount);
   const hasMore = !showAll && mentors.length > initialCount;
+  const isPlacement = category === 'placement';
 
   if (!mentors.length) {
     return (
@@ -34,7 +35,11 @@ export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession 
           <circle cx="12" cy="8" r="4" />
           <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
         </svg>
-        <p className="text-gray-500">No verified mentors match your filters.</p>
+        <p className="text-gray-500">
+          {isPlacement
+            ? 'No placed seniors match your search yet.'
+            : 'No verified mentors match your filters.'}
+        </p>
       </div>
     );
   }
@@ -43,7 +48,7 @@ export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession 
     <>
       <div className="mentor-grid max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {visibleMentors.map(mentor => (
-          <MentorCard key={mentor.id} mentor={mentor} onBook={onBookSession} />
+          <MentorCard key={mentor.id} mentor={mentor} category={category} onBook={onBookSession} />
         ))}
       </div>
 
@@ -54,13 +59,13 @@ export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession 
             onClick={onViewAll}
             className="inline-flex items-center gap-2 px-6 py-3 border-2 border-indigo-200 bg-white text-indigo-600 rounded-xl text-sm font-bold hover:bg-indigo-50 hover:-translate-y-0.5 transition"
           >
-            View All Mentors
+            {isPlacement ? 'View All Placed Seniors' : 'View All Mentors'}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
           <p className="text-xs text-gray-400 mt-2">
-            Showing {visibleMentors.length} of {mentors.length} mentors
+            Showing {visibleMentors.length} of {mentors.length} {isPlacement ? 'placed seniors' : 'mentors'}
           </p>
         </div>
       )}
@@ -68,9 +73,10 @@ export default function MentorGrid({ mentors, showAll, onViewAll, onBookSession 
   );
 }
 
-function MentorCard({ mentor, onBook }) {
+function MentorCard({ mentor, category, onBook }) {
   const [colorA, colorB] = pickPalette(mentor.full_name);
   const exams = parseExams(mentor.exam_profile);
+  const isPlacement = category === 'placement';
 
   return (
     <div className="mentor-card relative flex flex-col bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:-translate-y-1 transition" style={{ minWidth: '340px' }}>
@@ -110,24 +116,62 @@ function MentorCard({ mentor, onBook }) {
           <span className="truncate">{mentor.branch || '—'}</span>
         </div>
 
-        {/* Exam Tags */}
-        <div className="exam-tags flex flex-wrap gap-1 mb-3 min-h-[24px]">
-          {exams.map((exam, i) => (
-            <span
-              key={i}
-              className={`exam-tag px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${examTagClass(
-                exam
-              )}`}
-            >
-              {exam}
-            </span>
-          ))}
-        </div>
+        {isPlacement ? (
+          <>
+            {/* Placement tag */}
+            <div className="exam-tags flex flex-wrap gap-1 mb-3 min-h-[24px]">
+              <span className="exam-tag px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border bg-green-50 text-green-700 border-green-200">
+                Placed
+              </span>
+              {mentor.experience_level && (
+                <span className="exam-tag px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border bg-amber-50 text-amber-700 border-amber-200">
+                  {experienceLabel(mentor)}
+                </span>
+              )}
+            </div>
 
-        {/* Ranks */}
-        <div className="ranks-row flex gap-2 mb-4 min-h-[62px]">
-          {buildRankBoxes(mentor)}
-        </div>
+            {/* Company + Package */}
+            <div className="ranks-row flex gap-2 mb-4 min-h-[62px]">
+              <div className="rank-box flex-1 min-w-0 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100 rounded-xl p-2 text-center">
+                <div className="text-sm font-extrabold text-indigo-600 leading-tight truncate">
+                  {mentor.company || '—'}
+                </div>
+                <div className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wider mt-1">
+                  Company
+                </div>
+              </div>
+              <div className="rank-box flex-1 min-w-0 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-100 rounded-xl p-2 text-center">
+                <div className="text-sm font-extrabold text-indigo-600 leading-tight truncate">
+                  {mentor.role || '—'}
+                </div>
+                <div className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wider mt-1">
+                  Role
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Exam Tags */}
+            <div className="exam-tags flex flex-wrap gap-1 mb-3 min-h-[24px]">
+              {exams.map((exam, i) => (
+                <span
+                  key={i}
+                  className={`exam-tag px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${examTagClass(
+                    exam
+                  )}`}
+                >
+                  {exam}
+                </span>
+              ))}
+            </div>
+
+            {/* Ranks */}
+            <div className="ranks-row flex gap-2 mb-4 min-h-[62px]">
+              {buildRankBoxes(mentor)}
+            </div>
+          </>
+        )}
 
         {/* Book Button */}
         <button
@@ -163,4 +207,13 @@ function buildRankBoxes(mentor) {
       </div>
     </div>
   ));
+}
+
+function experienceLabel(mentor) {
+  if (mentor.experience_level === 'fresher') return 'Fresher';
+  if (mentor.experience_level === 'experienced') {
+    const y = Number(mentor.years_experience);
+    return y ? `${y} ${y === 1 ? 'yr' : 'yrs'} Experience` : 'Experienced';
+  }
+  return 'Newly Joined'; // older rows
 }

@@ -51,6 +51,7 @@ async function renderPdfToCanvases(blobUrl, container) {
 
 export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, showToast }) {
     const [stage, setStage] = useState('checking'); // 'checking' | 'form' | 'paying' | 'viewer' | 'error'
+    const [loadingMsg, setLoadingMsg] = useState('Checking your access…');
     const [pdfInfo, setPdfInfo] = useState(null);
     const [signedUrl, setSignedUrl] = useState('');
     const [errorMsg, setErrorMsg] = useState('');
@@ -80,8 +81,10 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                 });
 
                 if (!error && data?.purchased && data?.signed_url) {
+                    setLoadingMsg('Applying your security watermark…');
                     const watermarkText = `${studentName} · ${studentEmail} · ${studentPhone}`;
                     const stampedUrl = await stampWatermark(data.signed_url, watermarkText);
+                    setLoadingMsg('Loading pages…');
                     sessionStorage.setItem(cacheKey, stampedUrl);
                     setSignedUrl(stampedUrl);
                     setPdfInfo(prev => ({ ...prev, title: data.pdf_title || '' }));
@@ -261,7 +264,9 @@ export default function PriorityOrderModal({ pdfSlug, studentSession, onClose, s
                 <div className={`flex-1 p-6 ${stage === 'viewer' ? 'overflow-hidden' : 'overflow-auto'}`}>
                     {stage === 'checking' && (
                         <div className="text-center py-16">
-                            <div className="text-sm text-gray-500">Checking your access…</div>
+                            <div className="animate-spin h-8 w-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto mb-4"></div>
+                            <div className="text-sm text-gray-500">{loadingMsg}</div>
+                            <div className="text-[11px] text-gray-400 mt-1">This can take a few seconds the first time</div>
                         </div>
                     )}
 

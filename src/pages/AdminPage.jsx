@@ -11,6 +11,7 @@ import BookingsPanel from '../components/admin/BookingsPanel';
 import FreeRequestsPanel from '../components/admin/FreeRequestsPanel';
 import MentorsPanel from '../components/admin/MentorsPanel';
 import ApprovalsPanel from '../components/admin/ApprovalsPanel';
+import PlacementPanel from '../components/admin/PlacementPanel';
 import StudentsPanel from '../components/admin/StudentsPanel';
 import PdfPurchasesPanel from '../components/admin/PdfPurchasesPanel';
 import AdminToast from '../components/admin/AdminToast';
@@ -280,7 +281,11 @@ export default function AdminPage() {
 
           if (eventType === 'INSERT' && newRow.status === 'pending') {
             setApplications(prev => [newRow, ...prev]);
-            showRTMessage(`📋 New mentor application: ${newRow.full_name}`);
+            showRTMessage(
+              newRow.category === 'placement'
+                ? `💼 New placed senior registration: ${newRow.full_name}`
+                : `📋 New mentor application: ${newRow.full_name}`
+            );
           } else if (eventType === 'UPDATE') {
             if (newRow.status !== 'pending') {
               setApplications(prev =>
@@ -329,16 +334,45 @@ export default function AdminPage() {
   // COMPUTED VALUES (safe after hooks)
   // ══════════════════════════════════════════════════════════
 
+  // Split everything into ENTRANCE seniors and PLACED seniors
+  const isPlacementMentor = m => m?.category === 'placement';
+  const placementMentors = mentors.filter(isPlacementMentor);
+  const entranceMentors = mentors.filter(m => !isPlacementMentor(m));
+  const placementMentorIds = new Set(placementMentors.map(m => String(m.id)));
+
+  const placementApps = applications.filter(a => a.category === 'placement');
+  const entranceApps = applications.filter(a => a.category !== 'placement');
+
   const paidBookings = getPaidBookings();
-  const validBookings = paidBookings.filter(b => (b.status || 'pending') !== 'cancelled');
-  const totalRevenue = validBookings.reduce((s, b) => s + Number(b.session_fee || SESSION_FEE), 0);
-  const totalPayouts = validBookings.reduce((s, b) => s + Number(b.mentor_payout || MENTOR_PAYOUT), 0);
+  const isPlacementBooking = b =>
+    placementMentorIds.has(String(b.mentor_id)) ||
+    Number(b.session_fee) === Number(CONFIG.PLACEMENT_SESSION_FEE);
+  const placementBookings = paidBookings.filter(isPlacementBooking);
+  const entranceBookings = paidBookings.filter(b => !isPlacementBooking(b));
+
+  function calcMoney(list, defFee, defPayout) {
+    const valid = list.filter(b => (b.status || 'pending') !== 'cancelled');
+    return {
+      revenue: valid.reduce((s, b) => s + Number(b.session_fee || defFee), 0),
+      payouts: valid.reduce((s, b) => s + Number(b.mentor_payout || defPayout), 0)
+    };
+  }
+
+  const entranceMoney = calcMoney(entranceBookings, SESSION_FEE, MENTOR_PAYOUT);
+  const placementMoney = calcMoney(
+    placementBookings,
+    CONFIG.PLACEMENT_SESSION_FEE,
+    CONFIG.PLACEMENT_MENTOR_PAYOUT
+  );
+
+  const showPlacementStats = activeTab === 'placement';
 
   const tabCounts = {
-    bookings: paidBookings.length,
+    bookings: entranceBookings.length,
     free: getFreeRequests().length,
-    mentors: mentors.length,
-    approvals: applications.length,
+    mentors: entranceMentors.length,
+    approvals: entranceApps.length,
+    placement: placementApps.length,
     students: (() => {
       const map = {};
       bookings.forEach(b => {
@@ -372,16 +406,16 @@ export default function AdminPage() {
 
       <div className="adm-content px-7 py-5">
         <AdminStats
-          totalBookings={paidBookings.length}
-          activeMentors={mentors.length}
-          revenue={totalRevenue}
-          payouts={totalPayouts}
+          totalBookings={showPlacementStats ? placementBookings.length : entranceBookings.length}
+          activeMentors={showPlacementStats ? placementMentors.length : entranceMentors.length}
+          revenue={showPlacementStats ? placementMoney.revenue : entranceMoney.revenue}
+          payouts={showPlacementStats ? placementMoney.payouts : entranceMoney.payouts}
         />
 
         {activeTab === 'bookings' && (
           <BookingsPanel
-            bookings={paidBookings}
-            mentors={mentors}
+            bookings={entranceBookings}
+            mentors={entranceMentors}
             onRefresh={loadAll}
             onViewBooking={b => {
               setDetailData(b);
@@ -402,7 +436,7 @@ export default function AdminPage() {
 
         {activeTab === 'mentors' && (
           <MentorsPanel
-            mentors={mentors}
+            mentors={entranceMentors}
             onRefresh={loadAll}
             onViewMentor={m => {
               setDetailData(m);
@@ -414,12 +448,35 @@ export default function AdminPage() {
 
         {activeTab === 'approvals' && (
           <ApprovalsPanel
-            applications={applications}
+            applications={entranceApps}
             onRefresh={loadAll}
             onViewApp={a => {
               setDetailData(a);
               setDetailType('app');
             }}
+            showToast={showToastMessage}
+          />
+        )}
+
+        {activeTab === 'placement' && (
+          <PlacementPanel
+            applications={placementApps}
+            mentors={placementMentors}
+            bookings={placementBookings}
+            onRefresh={loadAll}
+            onViewApp={a => {
+              setDetailData(a);
+              setDetailType('app');
+            }}
+            onViewMentor={m => {
+              setDetailData(m);
+              setDetailType('mentor');
+            }}
+            onViewBooking={b => {
+              setDetailData(b);
+              setDetailType('booking');
+            }}
+            onOpenLightbox={setLightboxImage}
             showToast={showToastMessage}
           />
         )}

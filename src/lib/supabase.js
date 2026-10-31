@@ -17,13 +17,25 @@ export const supabase = createClient(
 
 console.log('✅ Supabase client initialized:', CONFIG.SUPABASE_URL);
 
+// Returns the logged-in user's token, or the public key if nobody is logged in
+async function getAuthToken() {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || CONFIG.SUPABASE_ANON;
+  } catch (_) {
+    return CONFIG.SUPABASE_ANON;
+  }
+}
+
 // Helper: Direct REST API call (legacy compatibility)
 export async function sbFetch(path, opts = {}) {
+  const token = await getAuthToken();
+
   const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${path}`, {
     method: opts.method || 'GET',
     headers: {
       apikey: CONFIG.SUPABASE_ANON,
-      Authorization: `Bearer ${CONFIG.SUPABASE_ANON}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
       Prefer: opts.prefer || 'return=representation',
       ...(opts.headers || {})
@@ -41,7 +53,10 @@ export async function sbFetch(path, opts = {}) {
   }
 
   if (res.status === 204) return null;
-  return res.json();
+
+  // 'return=minimal' answers with an empty body, so don't force JSON parsing
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 // Helper: Upload file to Supabase Storage
@@ -58,13 +73,14 @@ export async function sbUpload(bucket, filePath, file) {
   const ext = filePath.split('.').pop().toLowerCase();
   const mimeType = extMap[ext] || file.type || 'image/jpeg';
   const url = `${CONFIG.SUPABASE_URL}/storage/v1/object/${bucket}/${filePath}`;
+  const token = await getAuthToken();
 
   for (const method of ['POST', 'PUT']) {
     const res = await fetch(url, {
       method,
       headers: {
         apikey: CONFIG.SUPABASE_ANON,
-        Authorization: `Bearer ${CONFIG.SUPABASE_ANON}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': mimeType,
         'x-upsert': 'true',
         'Cache-Control': '3600'
