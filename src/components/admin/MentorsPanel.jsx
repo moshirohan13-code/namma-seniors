@@ -1,14 +1,41 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import EditMentorModal from './EditMentorModal';
+
+function isSenior(m) {
+  return m?.category === 'placement';
+}
+
+function experienceText(m) {
+  if (m.experience_level === 'fresher') return 'Fresher';
+  if (m.experience_level === 'experienced') {
+    const y = Number(m.years_experience);
+    return y ? `${y} ${y === 1 ? 'yr' : 'yrs'} experience` : 'Experienced';
+  }
+  return m.experience_level ? 'Newly Joined' : '';
+}
 
 export default function MentorsPanel({ mentors, onRefresh, onViewMentor, showToast }) {
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'junior' | 'senior'
+  const [editing, setEditing] = useState(null);
+
+  const juniorCount = mentors.filter(m => !isSenior(m)).length;
+  const seniorCount = mentors.filter(m => isSenior(m)).length;
 
   const filtered = mentors.filter(m => {
+    if (typeFilter === 'junior' && isSenior(m)) return false;
+    if (typeFilter === 'senior' && !isSenior(m)) return false;
     const s = search.toLowerCase();
     if (!s) return true;
-    return [m.full_name, m.college, m.branch, m.phone].join(' ').toLowerCase().includes(s);
+    return [m.full_name, m.college, m.branch, m.phone, m.company, m.role]
+      .join(' ')
+      .toLowerCase()
+      .includes(s);
   });
+
+  const reorderLocked = search.trim() !== '' || typeFilter !== 'all';
+
   async function moveMentor(id, direction) {
     const idx = mentors.findIndex(m => String(m.id) === String(id));
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -47,114 +74,178 @@ export default function MentorsPanel({ mentors, onRefresh, onViewMentor, showToa
     }
   }
 
+  const th = 'px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100';
+
+  const filterBtn = (id, label, count) => (
+    <button
+      key={id}
+      onClick={() => setTypeFilter(id)}
+      className={`px-3 py-1.5 rounded-full text-[11px] font-extrabold border-2 transition ${typeFilter === id
+        ? 'bg-indigo-600 text-white border-indigo-600'
+        : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'
+        }`}
+    >
+      {label} <span className="opacity-80">({count})</span>
+    </button>
+  );
+
   return (
-    <div className="tbl-card bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5">
-      <div className="tbl-head p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h3 className="text-[15px] font-black text-gray-900">👤 Mentor Directory</h3>
-          <p className="text-[11.5px] text-gray-500 mt-0.5">All approved mentors</p>
+    <>
+      <div className="tbl-card bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-5">
+        <div className="tbl-head p-5 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-[15px] font-black text-gray-900">👤 Mentor Directory</h3>
+            <p className="text-[11.5px] text-gray-500 mt-0.5">
+              All approved mentors: Junior Mentors (entrance exams) and Senior Mentors (placed)
+            </p>
+          </div>
+          <div className="tbl-actions flex gap-2 items-center flex-wrap">
+            <button
+              onClick={onRefresh}
+              className="refresh-btn inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-200 rounded-lg bg-white text-xs font-extrabold text-gray-700 hover:border-indigo-600 hover:text-indigo-600 transition"
+            >
+              🔄 Refresh
+            </button>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search mentors…"
+              className="tbl-search px-3 py-2 border-2 border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 min-w-[200px]"
+            />
+          </div>
         </div>
-        <div className="tbl-actions flex gap-2 items-center flex-wrap">
-          <button
-            onClick={onRefresh}
-            className="refresh-btn inline-flex items-center gap-1 px-4 py-2 border-2 border-gray-200 rounded-lg bg-white text-xs font-extrabold text-gray-700 hover:border-indigo-600 hover:text-indigo-600 transition"
-          >
-            🔄 Refresh
-          </button>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search mentors…"
-            className="tbl-search px-3 py-2 border-2 border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 min-w-[200px]"
-          />
+
+        <div className="px-5 pt-4 flex gap-2 flex-wrap">
+          {filterBtn('all', 'All', mentors.length)}
+          {filterBtn('junior', 'Junior Mentors', juniorCount)}
+          {filterBtn('senior', 'Senior Mentors (Placed)', seniorCount)}
+        </div>
+
+        <div className="overflow-x-auto mt-3">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-indigo-50/50">
+                <th className={th}>#</th>
+                <th className={th}>Name</th>
+                <th className={th}>Type</th>
+                <th className={th}>College</th>
+                <th className={th}>Degree & Branch</th>
+                <th className={th}>Year</th>
+                <th className={th}>Exam Ranks / Job</th>
+                <th className={th}>WhatsApp</th>
+                <th className={th}>Featured</th>
+                <th className={th}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!filtered.length ? (
+                <tr>
+                  <td colSpan="10" className="text-center text-gray-400 py-10 text-sm">No mentors.</td>
+                </tr>
+              ) : (
+                filtered.map((m, i) => (
+                  <tr key={m.id} className="hover:bg-indigo-50/30 border-b border-gray-100 transition">
+                    <td className="px-3 py-2 text-xs text-gray-700">{i + 1}</td>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-900">{m.full_name}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {isSenior(m) ? (
+                        <div>
+                          <span className="px-2 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">
+                            💼 Senior Mentor
+                          </span>
+                          <div className="text-[10px] text-gray-500 mt-1">Placed</div>
+                        </div>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full text-[10px] font-extrabold bg-indigo-100 text-indigo-800">
+                          🎓 Junior Mentor
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-gray-600 max-w-[120px] truncate">{m.college || '—'}</td>
+                    <td className="px-3 py-2 text-xs">
+                      <div className="font-bold text-gray-900">{m.degree || '—'}</div>
+                      <div className="text-[10px] text-gray-400">{m.branch || ''}</div>
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-700">{m.year || '—'}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {isSenior(m) ? (
+                        <div>
+                          <div className="font-bold text-gray-900">{m.company || '—'}</div>
+                          <div className="text-[10px] text-gray-500">
+                            {[m.role, experienceText(m)].filter(Boolean).join(' · ') || '—'}
+                          </div>
+                        </div>
+                      ) : (
+                        <RankPills mentor={m} />
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs font-bold text-gray-700 whitespace-nowrap">
+                      {m.phone || '—'}
+                      {m.phone && <WhatsAppLink phone={m.phone} />}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      {m.featured ? (
+                        <span className="rank-pill rp-neet px-2 py-1 rounded-full text-[10px] font-extrabold bg-green-100 text-green-800">⭐ Yes</span>
+                      ) : (
+                        <span className="text-gray-400 italic text-[11px]">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-xs">
+                      <div className="flex gap-1 flex-wrap">
+                        <button
+                          onClick={() => moveMentor(m.id, 'up')}
+                          disabled={i === 0 || reorderLocked}
+                          className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
+                          title="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          onClick={() => moveMentor(m.id, 'down')}
+                          disabled={i === filtered.length - 1 || reorderLocked}
+                          className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
+                          title="Move down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          onClick={() => setEditing(m)}
+                          className="act-btn px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-black hover:bg-amber-100 transition"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => onViewMentor(m)}
+                          className="act-btn px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-black hover:bg-indigo-100 transition"
+                        >
+                          👁
+                        </button>
+                        <button
+                          onClick={() => removeMentor(m.id)}
+                          className="act-btn px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[11px] font-black hover:bg-red-100 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-indigo-50/50">
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">#</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Name</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">College</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Degree & Branch</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Year</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Exam Ranks</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">WhatsApp</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Featured</th>
-              <th className="px-3 py-2 text-left text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!filtered.length ? (
-              <tr>
-                <td colSpan="9" className="text-center text-gray-400 py-10 text-sm">No mentors.</td>
-              </tr>
-            ) : (
-              filtered.map((m, i) => (
-                <tr key={m.id} className="hover:bg-indigo-50/30 border-b border-gray-100 transition">
-                  <td className="px-3 py-2 text-xs text-gray-700">{i + 1}</td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-900">{m.full_name}</td>
-                  <td className="px-3 py-2 text-[11px] text-gray-600 max-w-[120px] truncate">{m.college || '—'}</td>
-                  <td className="px-3 py-2 text-xs">
-                    <div className="font-bold text-gray-900">{m.degree || '—'}</div>
-                    <div className="text-[10px] text-gray-400">{m.branch || ''}</div>
-                  </td>
-                  <td className="px-3 py-2 text-xs text-gray-700">{m.year || '—'}</td>
-                  <td className="px-3 py-2 text-xs">
-                    <RankPills mentor={m} />
-                  </td>
-                  <td className="px-3 py-2 text-xs font-bold text-gray-700 whitespace-nowrap">
-                    {m.phone || '—'}
-                    {m.phone && <WhatsAppLink phone={m.phone} />}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    {m.featured ? (
-                      <span className="rank-pill rp-neet px-2 py-1 rounded-full text-[10px] font-extrabold bg-green-100 text-green-800">⭐ Yes</span>
-                    ) : (
-                      <span className="text-gray-400 italic text-[11px]">—</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-xs">
-                    <div className="flex gap-1 flex-wrap">
-                      <button
-                        onClick={() => moveMentor(m.id, 'up')}
-                        disabled={i === 0 || search.trim() !== ''}
-                        className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
-                        title="Move up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => moveMentor(m.id, 'down')}
-                        disabled={i === filtered.length - 1 || search.trim() !== ''}
-                        className="act-btn px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg text-[11px] font-black hover:bg-gray-100 transition disabled:opacity-30"
-                        title="Move down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={() => onViewMentor(m)}
-                        className="act-btn px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-black hover:bg-indigo-100 transition"
-                      >
-                        👁
-                      </button>
-                      <button
-                        onClick={() => removeMentor(m.id)}
-                        className="act-btn px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[11px] font-black hover:bg-red-100 transition"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {editing && (
+        <EditMentorModal
+          mentor={editing}
+          onClose={() => setEditing(null)}
+          onSaved={onRefresh}
+          showToast={showToast}
+        />
+      )}
+    </>
   );
 }
 

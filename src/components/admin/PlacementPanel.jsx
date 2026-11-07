@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { CONFIG } from '../../lib/config';
 import BookingsPanel from './BookingsPanel';
+import EditMentorModal from './EditMentorModal';
 
 function experienceText(x) {
     if (x.experience_level === 'fresher') return 'Fresher';
@@ -25,6 +26,7 @@ export default function PlacementPanel({
 }) {
     const [sub, setSub] = useState('registrations');
     const [search, setSearch] = useState('');
+    const [editing, setEditing] = useState(null);
 
     const subTabs = [
         { id: 'registrations', label: '📝 Registrations', count: applications.length, red: true },
@@ -325,6 +327,7 @@ export default function PlacementPanel({
                                             </td>
                                             <td className="px-3 py-2 text-xs">
                                                 <div className="flex gap-1 flex-wrap">
+                                                    <button onClick={() => setEditing(m)} className="act-btn px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-[11px] font-black hover:bg-amber-100 transition">✏️ Edit</button>
                                                     <button onClick={() => onViewMentor(m)} className="act-btn px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[11px] font-black hover:bg-indigo-100 transition">👁</button>
                                                     <button onClick={() => removeMentor(m.id)} className="act-btn px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded-lg text-[11px] font-black hover:bg-red-100 transition">Remove</button>
                                                 </div>
@@ -415,6 +418,15 @@ export default function PlacementPanel({
                         </table>
                     </div>
                 </div>
+            )}
+
+            {editing && (
+                <EditMentorModal
+                    mentor={editing}
+                    onClose={() => setEditing(null)}
+                    onSaved={onRefresh}
+                    showToast={showToast}
+                />
             )}
         </div>
     );

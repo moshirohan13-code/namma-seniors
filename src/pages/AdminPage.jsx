@@ -370,7 +370,7 @@ export default function AdminPage() {
   const tabCounts = {
     bookings: entranceBookings.length,
     free: getFreeRequests().length,
-    mentors: entranceMentors.length,
+    mentors: mentors.length,
     approvals: entranceApps.length,
     placement: placementApps.length,
     students: (() => {
@@ -436,7 +436,7 @@ export default function AdminPage() {
 
         {activeTab === 'mentors' && (
           <MentorsPanel
-            mentors={entranceMentors}
+            mentors={mentors}
             onRefresh={loadAll}
             onViewMentor={m => {
               setDetailData(m);
