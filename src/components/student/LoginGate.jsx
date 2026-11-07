@@ -1,7 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase, sbFetch } from '../../lib/supabase';
 import { CONFIG } from '../../lib/config';
 import { isValidEmail, isValidPhone } from '../../utils/validators';
+
+// Public Google "Web client" ID (safe to expose). Set VITE_GOOGLE_CLIENT_ID in .env and on Vercel.
+// If it is missing, the old redirect-style Google button is used instead.
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+function loadGoogleScript() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.id) return resolve();
+    const src = 'https://accounts.google.com/gsi/client';
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// Random value + its SHA-256 hash (hex). Google gets the hash, Supabase gets the raw value.
+async function makeNonce() {
+  const raw = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+  const bytes = new TextEncoder().encode(raw);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const hashed = Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  return { raw, hashed };
+}
 
 export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) {
   const [email, setEmail] = useState('');
@@ -18,6 +53,18 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
   const [googlePhone, setGooglePhone] = useState('');
   const [googlePhoneError, setGooglePhoneError] = useState(false);
 
+  // Google's own button
+  const gsiBtnRef = useRef(null);
+  const nonceRef = useRef(null);
+  const toastRef = useRef(showToast);
+  const [gsiReady, setGsiReady] = useState(false);
+  const [gsiFailed, setGsiFailed] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  useEffect(() => {
+    toastRef.current = showToast;
+  }, [showToast]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user?.email) {
@@ -26,6 +73,68 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
     });
   }, []);
 
+  // Draw Google's "Continue with Google" button when the main login view is showing
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID || googleEmail || showAdminPassword) return;
+
+    let cancelled = false;
+
+    async function setup() {
+      try {
+        await loadGoogleScript();
+        if (cancelled || !gsiBtnRef.current || !window.google?.accounts?.id) return;
+
+        if (!nonceRef.current) nonceRef.current = await makeNonce();
+        if (cancelled || !gsiBtnRef.current) return;
+
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          nonce: nonceRef.current.hashed,
+          callback: async response => {
+            setGoogleBusy(true);
+            try {
+              const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.credential,
+                nonce: nonceRef.current.raw
+              });
+              if (error) throw error;
+              const mail = data?.user?.email || data?.session?.user?.email;
+              if (mail) setGoogleEmail(mail);
+            } catch (e) {
+              console.error('[Google sign-in failed]', e);
+              toastRef.current && toastRef.current('⚠️ Google sign-in failed: ' + (e.message || 'Unknown error'));
+            } finally {
+              setGoogleBusy(false);
+            }
+          }
+        });
+
+        const width = Math.min(400, Math.max(220, gsiBtnRef.current.offsetWidth || 320));
+        gsiBtnRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(gsiBtnRef.current, {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width
+        });
+        setGsiReady(true);
+      } catch (e) {
+        console.error('[Google script failed to load]', e);
+        if (!cancelled) setGsiFailed(true);
+      }
+    }
+
+    setup();
+    return () => {
+      cancelled = true;
+    };
+  }, [googleEmail, showAdminPassword]);
+
+  // Old redirect-style login (used only if the new button is not available)
   const signInWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -243,6 +352,8 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
     );
   }
 
+  const useNewGoogleButton = !!GOOGLE_CLIENT_ID && !gsiFailed;
+
   return (
     <div className={`fixed inset-0 z-[9000] flex items-center justify-center p-4 ${mandatory ? '' : 'cursor-pointer'}`}>
       <div
@@ -343,18 +454,31 @@ export default function LoginGate({ mandatory, onClose, onSuccess, showToast }) 
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
-        <button
-          onClick={signInWithGoogle}
-          className="w-full py-3 px-4 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:border-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center gap-2"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-          </svg>
-          Continue with Google
-        </button>
+        {useNewGoogleButton ? (
+          <div>
+            {/* Google draws its own button here */}
+            <div ref={gsiBtnRef} className="w-full flex justify-center min-h-[44px]" />
+            {googleBusy && (
+              <div className="text-center text-xs text-gray-500 mt-2">Signing you in…</div>
+            )}
+            {!gsiReady && !googleBusy && (
+              <div className="text-center text-xs text-gray-400 mt-2">Loading Google sign-in…</div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={signInWithGoogle}
+            className="w-full py-3 px-4 border-2 border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:border-indigo-600 hover:bg-indigo-50 transition flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Continue with Google
+          </button>
+        )}
       </div>
     </div>
   );
